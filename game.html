@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Ular Tangga Edukatif - KKG PAI</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        
+        body {
+            font-family:'Poppins',sans-serif;
+            background:linear-gradient(135deg,#0d3b2e,#1a6b4f,#0d3b2e);
+            min-height:100vh;
+            overflow-x:hidden;
+        }
+
+        /* ===== LOBBY ===== */
+        .lobby-overlay {
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:linear-gradient(135deg,#0d3b2e 0%,#1a6b4f 50%,#0d3b2e 100%);
+            z-index:5000;display:flex;align-items:center;justify-content:center;
+            flex-direction:column;padding:20px;
+        }
+        .lobby-card {
+            background:rgba(255,255,255,0.97);border-radius:25px;padding:30px;
+            max-width:550px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);
+            text-align:center;
+        }
+        .lobby-card img.lobby-logo {
+            width:120px;height:120px;border-radius:50%;
+            box-shadow:0 5px 20px rgba(0,0,0,.3);border:3px solid #ffd700;margin-bottom:12px;
+        }
+        .lobby-card h1 {
+            font-size:22px;color:#1a5c3a;margin-bottom:5px;
+        }
+        .lobby-card .sub {
+            color:#888;font-size:13px;margin-bottom:20px;
+        }
+        .lobby-card h3 {
+            color:#1a5c3a;font-size:16px;margin-bottom:15px;
+            padding-bottom:8px;border-bottom:2px solid #ffd700;
+        }
+        .player-setup {
+            display:grid;gap:10px;margin-bottom:20px;
+        }
+        .player-row {
+            display:flex;align-items:center;gap:10px;
+            background:#f8f9fa;padding:10px 12px;border-radius:12px;
+        }
+        .player-row img {
+            width:36px;height:36px;
+        }
+        .player-row input {
+            flex:1;padding:8px 12px;border:2px solid #e0e0e0;
+            border-radius:8px;font-family:'Poppins';font-size:13px;
+        }
+        .player-row input:focus {
+            border-color:#1a6b4f;outline:none;
+        }
+        .player-row .remove-btn {
+            background:#e74c3c;color:#fff;border:none;border-radius:50%;
+            width:28px;height:28px;cursor:pointer;font-weight:700;font-size:14px;
+        }
+        .add-player-btn {
+            background:none;border:2px dashed #1a6b4f;border-radius:12px;
+            padding:10px;cursor:pointer;color:#1a6b4f;font-weight:600;
+            font-family:'Poppins';width:100%;font-size:14px;
+        }
+        .add-player-btn:hover { background:#f0faf5; }
+        .btn {
+            padding:12px 28px;border:none;border-radius:12px;font-size:15px;
+            font-weight:700;cursor:pointer;font-family:'Poppins';
+            transition:all .3s;display:inline-flex;align-items:center;gap:8px;
+        }
+        .btn-play {
+            background:linear-gradient(135deg,#ffd700,#ffaa00);color:#1a5c3a;
+            box-shadow:0 4px 15px rgba(255,215,0,.4);font-size:18px;
+            padding:14px 40px;
+        }
+        .btn-play:hover { transform:translateY(-3px);box-shadow:0 8px 25px rgba(255,215,0,.5); }
+
+        /* ===== GAME AREA ===== */
+        .game-wrapper {
+            display:none;padding:10px;
+        }
+        .game-wrapper.active { display:block; }
+        
+        .game-header {
+            text-align:center;color:#ffd700;padding:8px;
+        }
+        .game-header h2 { font-size:18px; }
+        .game-header .info { color:rgba(255,255,255,.7);font-size:12px; }
+        
+        .game-layout {
+            display:flex;gap:15px;max-width:1200px;margin:0 auto;
+            flex-wrap:wrap;justify-content:center;
+        }
+        
+        /* Board */
+        .board-container {
+            position:relative;width:600px;height:600px;flex-shrink:0;
+        }
+        .board-container img.board-img {
+            width:100%;height:100%;border-radius:12px;
+            box-shadow:0 10px 40px rgba(0,0,0,.4);
+        }
+        .pawn {
+            position:absolute;width:32px;height:32px;
+            transition:all .6s cubic-bezier(.25,.46,.45,.94);
+            z-index:10;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));
+            pointer-events:none;
+        }
+
+        /* Side Panel */
+        .side-panel {
+            width:280px;display:flex;flex-direction:column;gap:10px;
+        }
+        .panel-box {
+            background:rgba(255,255,255,.95);border-radius:15px;
+            padding:15px;box-shadow:0 5px 20px rgba(0,0,0,.2);
+        }
+        .panel-box h4 {
+            color:#1a5c3a;font-size:14px;margin-bottom:10px;
+            padding-bottom:6px;border-bottom:2px solid #ffd700;
+        }
+        
+        /* Players info */
+        .player-info {
+            display:flex;align-items:center;gap:8px;padding:8px;
+            border-radius:10px;margin-bottom:6px;transition:all .3s;font-size:13px;
+        }
+        .player-info.current {
+            background:linear-gradient(135deg,#e8f5e9,#c8e6c9);
+            border:2px solid #1a6b4f;
+            box-shadow:0 0 10px rgba(26,107,79,.3);
+        }
+        .player-info img { width:28px;height:28px; }
+        .player-info .pname { font-weight:600;flex:1; }
+        .player-info .pscore { 
+            background:#1a5c3a;color:#ffd700;padding:2px 8px;
+            border-radius:8px;font-size:11px;font-weight:700;
+        }
+        .player-info .ppos {
+            font-size:11px;color:#888;
+        }
+        
+        /* Dice */
+        .dice-area { text-align:center; }
+        .dice {
+            width:80px;height:80px;background:white;border-radius:15px;
+            display:flex;align-items:center;justify-content:center;
+            font-size:40px;font-weight:900;color:#1a5c3a;
+            margin:10px auto;box-shadow:0 5px 20px rgba(0,0,0,.2);
+            cursor:pointer;transition:all .3s;border:3px solid #ffd700;
+            user-select:none;
+        }
+        .dice:hover { transform:scale(1.05); }
+        .dice.rolling {
+            animation:diceRoll .5s ease-in-out;
+        }
+        @keyframes diceRoll {
+            0%,100% { transform:rotate(0) scale(1); }
+            25% { transform:rotate(15deg) scale(1.1); }
+            50% { transform:rotate(-15deg) scale(1.15); }
+            75% { transform:rotate(10deg) scale(1.1); }
+        }
+        .dice-label {
+            font-size:12px;color:#1a5c3a;font-weight:600;
+        }
+        .current-turn {
+            background:linear-gradient(135deg,#1a6b4f,#2d8f6f);
+            color:white;padding:8px;border-radius:10px;
+            text-align:center;font-size:13px;font-weight:600;
+        }
+        
+        /* Log */
+        .log-area {
+            max-height:200px;overflow-y:auto;font-size:12px;
+        }
+        .log-item {
+            padding:4px 8px;border-bottom:1px solid #eee;color:#555;
+        }
+        .log-item:last-child { border-bottom:none; }
+        
+        /* ===== QUIZ MODAL ===== */
+        .quiz-overlay {
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.8);z-index:8000;
+            display:none;align-items:center;justify-content:center;padding:20px;
+        }
+        .quiz-overlay.show { display:flex; }
+        .quiz-modal {
+            background:white;border-radius:25px;padding:25px;
+            max-width:500px;width:100%;
+            box-shadow:0 20px 60px rgba(0,0,0,.5);
+            animation:popIn .4s ease;
+        }
+        @keyframes popIn {
+            from { transform:scale(.5);opacity:0; }
+            to { transform:scale(1);opacity:1; }
+        }
+        .quiz-header {
+            display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;
+        }
+        .quiz-type-badge {
+            padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;color:#fff;
+        }
+        .quiz-type-badge.ladder { background:#27ae60; }
+        .quiz-type-badge.snake { background:#e74c3c; }
+        
+        .timer-circle {
+            width:50px;height:50px;border-radius:50%;
+            border:4px solid #e0e0e0;display:flex;align-items:center;
+            justify-content:center;font-weight:800;font-size:18px;
+            position:relative;
+        }
+        .timer-circle.warning { border-color:#e74c3c;color:#e74c3c;animation:pulse .5s infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+        
+        .quiz-question {
+            font-size:16px;font-weight:600;color:#333;margin-bottom:20px;
+            line-height:1.5;
+        }
+        .quiz-options { display:grid;gap:10px; }
+        .quiz-option {
+            padding:12px 15px;border:2px solid #e0e0e0;border-radius:12px;
+            cursor:pointer;transition:all .3s;display:flex;align-items:center;
+            gap:10px;font-size:14px;
+        }
+        .quiz-option:hover { border-color:#1a6b4f;background:#f0faf5; }
+        .quiz-option .opt-letter {
+            width:32px;height:32px;border-radius:50%;
+            background:#f0f0f0;display:flex;align-items:center;
+            justify-content:center;font-weight:700;font-size:14px;
+            flex-shrink:0;
+        }
+        .quiz-option.correct {
+            border-color:#27ae60;background:#d4edda;
+        }
+        .quiz-option.correct .opt-letter { background:#27ae60;color:#fff; }
+        .quiz-option.wrong {
+            border-color:#e74c3c;background:#f8d7da;
+        }
+        .quiz-option.wrong .opt-letter { background:#e74c3c;color:#fff; }
+        .quiz-option.disabled { pointer-events:none;opacity:.6; }
+        
+        .quiz-result {
+            text-align:center;padding:15px;margin-top:10px;
+            border-radius:12px;font-weight:700;font-size:16px;
+            display:none;
+        }
+        .quiz-result.correct-result {
+            display:block;background:#d4edda;color:#155724;
+        }
+        .quiz-result.wrong-result {
+            display:block;background:#f8d7da;color:#721c24;
+        }
+
+        /* ===== WIN SCREEN ===== */
+        .win-overlay {
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(0,0,0,.85);z-index:9000;
+            display:none;align-items:center;justify-content:center;
+            flex-direction:column;padding:20px;
+        }
+        .win-overlay.show { display:flex; }
+        .win-card {
+            background:linear-gradient(135deg,#ffd700,#ffaa00);
+            border-radius:25px;padding:30px;text-align:center;
+            max-width:450px;width:100%;
+            box-shadow:0 20px 60px rgba(255,215,0,.4);
+            animation:popIn .5s ease;
+        }
+        .win-card h1 { font-size:32px;color:#1a5c3a; }
+        .win-card .trophy { font-size:80px;margin:15px 0; }
+        .win-card .winner-name { font-size:24px;color:#1a5c3a;font-weight:800; }
+        .confetti { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9001; }
+
+        /* ===== REPORT ===== */
+        .report-overlay {
+            position:fixed;top:0;left:0;width:100%;height:100%;
+            background:linear-gradient(135deg,#0d3b2e,#1a6b4f);
+            z-index:5000;padding:20px;overflow-y:auto;
+        }
+        .report-card {
+            background:white;border-radius:20px;padding:25px;
+            max-width:900px;margin:0 auto;
+            box-shadow:0 10px 40px rgba(0,0,0,.3);
+        }
+        .report-card h2 { color:#1a5c3a;margin-bottom:15px;text-align:center; }
+        .report-table {
+            width:100%;border-collapse:collapse;font-size:13px;
+        }
+        .report-table th {
+            background:linear-gradient(135deg,#1a6b4f,#2d8f6f);
+            color:white;padding:10px;text-align:left;
+        }
+        .report-table td {
+            padding:8px 10px;border-bottom:1px solid #eee;
+        }
+        .report-table tr:hover td { background:#f0faf5; }
+
+        /* RESPONSIVE */
+        @media(max-width:900px) {
+            .game-layout { flex-direction:column;align-items:center; }
+            .board-container { width:min(95vw,500px);height:min(95vw,500px); }
+            .side-panel { width:min(95vw,500px); }
+            .pawn { width:24px;height:24px; }
+        }
+        @media(max-width:500px) {
+            .board-container { width:95vw;height:95vw; }
+            .pawn { width:20px;height:20px; }
+            .lobby-card { padding:20px; }
+        }
+
+        .hidden { display:none!important; }
+    </style>
+</head>
+<body>
+
+<!-- AUDIO -->
+<audio id="sfxBismillah" src="bismillah.mp3" preload="auto"></audio>
+<audio id="sfxAlhamdulillah" src="alhamdulillah.mp3" preload="auto"></audio>
+<audio id="sfxAstaghfirullah" src="astaghfirullah.mp3" preload="auto"></audio>
+<audio id="sfxDadu" src="dadu.mp3" preload="auto"></audio>
+<audio id="sfxAllahuakbar" src="allahuakbar.mp3" preload="auto"></audio>
+
+<!-- LOBBY -->
+<div class="lobby-overlay" id="lobbyOverlay">
+    <div class="lobby-card">
+        <img class="lobby-logo" src="logo_kkg.png" alt="Logo" onerror="this.style.display='none'">
+        <h1>🐍 Ular Tangga Edukatif 🪜</h1>
+        <div class="sub" id="lobbyGameName">Memuat data game...</div>
+        
+        <div id="lobbyContent" class="hidden">
+            <h3>👥 Pemain (2-4 orang)</h3>
+            <div class="player-setup" id="playerSetup">
+                <!-- Player rows inserted by JS -->
+            </div>
+            <button class="add-player-btn" id="addPlayerBtn" onclick="addPlayerSlot()">➕ Tambah Pemain</button>
+            <br><br>
+            <button class="btn btn-play" onclick="startGame()">🎮 MULAI BERMAIN!</button>
+        </div>
+        
+        <div id="lobbyError" class="hidden" style="color:#e74c3c;padding:20px;">
+            <h3>❌ Game tidak ditemukan</h3>
+            <p>Link tidak valid atau game sudah dihapus.</p>
+        </div>
+    </div>
+</div>
+
+<!-- GAME AREA -->
+<div class="game-wrapper" id="gameWrapper">
+    <div class="game-header">
+        <h2 id="gameTitle">Ular Tangga Edukatif</h2>
+        <div class="info" id="gameInfo"></div>
+    </div>
+    
+    <div class="game-layout">
+        <div class="board-container" id="boardContainer">
+            <img class="board-img" src="papan.png" alt="Papan Ular Tangga">
+            <!-- Pawns will be placed here -->
+        </div>
+        
+        <div class="side-panel">
+            <div class="panel-box">
+                <div class="current-turn" id="currentTurn">Giliran: -</div>
+            </div>
+            
+            <div class="panel-box dice-area">
+                <h4>🎲 Lempar Dadu</h4>
+                <div class="dice" id="dice" onclick="rollDice()">🎲</div>
+                <div class="dice-label" id="diceLabel">Klik untuk lempar!</div>
+            </div>
+            
+            <div class="panel-box">
+                <h4>👥 Pemain</h4>
+                <div id="playersPanel"></div>
+            </div>
+            
+            <div class="panel-box">
+                <h4>📜 Log Permainan</h4>
+                <div class="log-area" id="logArea"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QUIZ MODAL -->
+<div class="quiz-overlay" id="quizOverlay">
+    <div class="quiz-modal">
+        <div class="quiz-header">
+            <span class="quiz-type-badge" id="quizBadge">Tangga</span>
+            <div class="timer-circle" id="timerCircle">15</div>
+        </div>
+        <div class="quiz-question" id="quizQuestion">Pertanyaan...</div>
+        <div class="quiz-options" id="quizOptions"></div>
+        <div class="quiz-result" id="quizResult"></div>
+    </div>
+</div>
+
+<!-- WIN SCREEN -->
+<div class="win-overlay" id="winOverlay">
+    <canvas class="confetti" id="confettiCanvas"></canvas>
+    <div class="win-card">
+        <h1>🏆 SELAMAT! 🏆</h1>
+        <div class="trophy">🎉</div>
+        <div class="winner-name" id="winnerName">Pemenang!</div>
+        <p style="margin:15px 0;color:#1a5c3a;">Telah memenangkan permainan!</p>
+        <button class="btn btn-play" onclick="showFinalReport()" style="margin-top:10px;">📊 Lihat Laporan</button>
+    </div>
+</div>
+
+<!-- REPORT OVERLAY -->
+<div class="report-overlay hidden" id="reportOverlay">
+    <div class="report-card">
+        <h2>📊 Laporan Hasil Permainan</h2>
+        <div id="reportMeta" style="text-align:center;color:#666;font-size:13px;margin-bottom:15px;"></div>
+        
+        <h4 style="color:#1a5c3a;margin:15px 0 10px;">🏅 Peringkat Pemain</h4>
+        <table class="report-table" id="rankTable">
+            <thead><tr><th>Peringkat</th><th>Nama</th><th>Skor</th><th>Benar</th><th>Salah</th><th>Posisi Akhir</th></tr></thead>
+            <tbody id="rankBody"></tbody>
+        </table>
+        
+        <h4 style="color:#1a5c3a;margin:15px 0 10px;">📋 Detail Jawaban</h4>
+        <table class="report-table" id="detailTable">
+            <thead><tr><th>No</th><th>Pemain</th><th>Soal</th><th>Jawaban</th><th>Status</th><th>Waktu</th></tr></thead>
+            <tbody id="detailBody"></tbody>
+        </table>
+        
+        <div style="text-align:center;margin-top:20px;">
+            <button class="btn btn-play" onclick="exportExcel()">📥 Export Excel</button>
+            <button class="btn" style="background:#1a6b4f;color:#fff;margin-left:10px;" onclick="saveResultsToFirebase()">💾 Simpan ke Server</button>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// ========== FIREBASE ==========
+const firebaseConfig = {
+    apiKey: "AIzaSyCpRaJouhxKC2mKOXjgA_DJFkWK0CRm9EU",
+    authDomain: "ulartangga-b7018.firebaseapp.com",
+    projectId: "ulartangga-b7018",
+    storageBucket: "ulartangga-b7018.firebasestorage.app",
+    messagingSenderId: "1043014952343",
+    appId: "1:1043014952343:web:bc3d3c19629cebd963d0d2",
+    measurementId: "G-NST66FGY2R"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ========== CONSTANTS ==========
+const BOARD_SIZE = 10; // 10x10
+const TOTAL_CELLS = 100;
+
+// Snakes and Ladders based on the board image
+const LADDERS = {
+    4: 36,   // kotak 4 → 36
+    6: 27,   // kotak 6 → 27
+    13: 46,  // kotak 13 → 46  (adjusted - not exact from image)
+    23: 45,  // kotak 23 → 45
+    42: 63,  // kotak 42 → 63
+    54: 88,  // kotak 54 → 88
+    32: 48,  // kotak 32 → 48
+    71: 89,  // kotak 71 → 89
+    85: 97   // kotak 85 → 97
+};
+
+const SNAKES = {
+    38: 17,  // kotak 38 → 17 (Dosa Masuk Neraka)
+    45: 24,  // kotak 45 → 24 (Acuh tak Acuh)
+    68: 53,  // kotak 68 → 53
+    97: 78,  // kotak 97 → 78 (Suka Bohong)
+    93: 72,  // kotak 93 → 72
+    62: 40,  // kotak 62 → 40 (Tidak Sayang Sesama)
+    88: 49,  // kotak 88 → 49 (Berkata Kasar)
+    99: 58   // kotak 99 → 58
+};
+
+const PAWN_IMAGES = ['pawn1.png','pawn2.png','pawn3.png','pawn4.png'];
+const PAWN_COLORS = ['#FFD700','#6666FF','#FF6633','#33FF99'];
+const PAWN_LABELS = ['Kuning','Biru','Oranye','Hijau'];
+
+// ========== STATE ==========
+let gameData = null;
+let players = [];
+let currentPlayerIndex = 0;
+let isRolling = false;
+let gameStarted = false;
+let gameEnded = false;
+let firstRoll = true;
+let questionPool = [];
+let questionIndex = 0;
+let answerLog = [];
+let timerInterval = null;
+let timerValue = 15;
+
+// ========== INIT ==========
+window.onload = async function() {
+    const params = new URLSearchParams(window.location.search);
+    const gameId = params.get('id');
+    const mode = params.get('mode');
+    
+    if (!gameId) {
+        document.getElementById('lobbyError').classList.remove('hidden');
+        document.getElementById('lobbyGameName').textContent = '';
+        return;
+    }
+    
+    try {
+        const doc = await db.collection('games').doc(gameId).get();
+        if (!doc.exists) {
+            document.getElementById('lobbyError').classList.remove('hidden');
+            document.getElementById('lobbyGameName').textContent = '';
+            return;
+        }
+        
+        gameData = doc.data();
+        gameData.id = gameId;
+        
+        if (mode === 'report') {
+            showSavedReport();
+            return;
+        }
+        
+        document.getElementById('lobbyGameName').textContent = 
+            `${gameData.gameName} | ${gameData.topicName} | oleh ${gameData.teacherName}`;
+        
+        questionPool = shuffleArray([...gameData.questions]);
+        
+        // Setup initial 2 player slots
+        setupPlayerSlots(2);
+        document.getElementById('lobbyContent').classList.remove('hidden');
+        
+    } catch(err) {
+        console.error(err);
+        document.getElementById('lobbyError').classList.remove('hidden');
+        document.getElementById('lobbyGameName').textContent = 'Error: ' + err.message;
+    }
+};
+
+// ========== LOBBY ==========
+let playerSlots = 2;
+
+function setupPlayerSlots(count) {
+    const container = document.getElementById('playerSetup');
+    container.innerHTML = '';
+    for (let i = 0; i < count; i++) {
+        const div = document.createElement('div');
+        div.className = 'player-row';
+        div.id = 'prow' + i;
+        div.innerHTML = `
+            <img src="${PAWN_IMAGES[i]}" alt="Pion ${i+1}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 40%22><circle cx=%2220%22 cy=%2220%22 r=%2218%22 fill=%22${encodeURIComponent(PAWN_COLORS[i])}%22/><text x=%2220%22 y=%2226%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2216%22 font-weight=%22bold%22>${i+1}</text></svg>'">
+            <input type="text" placeholder="Nama Pemain ${i+1}" id="pname${i}">
+            ${i >= 2 ? `<button class="remove-btn" onclick="removePlayerSlot(${i})">✕</button>` : ''}
+        `;
+        container.appendChild(div);
+    }
+    playerSlots = count;
+    document.getElementById('addPlayerBtn').style.display = count >= 4 ? 'none' : 'block';
+}
+
+function addPlayerSlot() {
+    if (playerSlots >= 4) return;
+    playerSlots++;
+    setupPlayerSlots(playerSlots);
+}
+
+function removePlayerSlot(idx) {
+    if (playerSlots <= 2) return;
+    playerSlots--;
+    setupPlayerSlots(playerSlots);
+}
+
+// ========== START GAME ==========
+function startGame() {
+    players = [];
+    for (let i = 0; i < playerSlots; i++) {
+        const name = document.getElementById('pname' + i).value.trim() || `Pemain ${i+1}`;
+        players.push({
+            name: name,
+            position: 0, // 0 = belum masuk papan
+            pawnIndex: i,
+            score: 0,
+            correct: 0,
+            wrong: 0,
+            finished: false,
+            finishOrder: 0
+        });
+    }
+    
+    document.getElementById('lobbyOverlay').style.display = 'none';
+    document.getElementById('gameWrapper').classList.add('active');
+    
+    document.getElementById('gameTitle').textContent = gameData.gameName;
+    document.getElementById('gameInfo').textContent = `${gameData.topicName} | ${gameData.teacherName}`;
+    
+    createPawns();
+    updatePlayersPanel();
+    updateCurrentTurn();
+    
+    gameStarted = true;
+    firstRoll = true;
+    
+    addLog('🎮 Game dimulai! ' + players.map(p=>p.name).join(' vs '));
+}
+
+function createPawns() {
+    const board = document.getElementById('boardContainer');
+    players.forEach((p, i) => {
+        const pawn = document.createElement('img');
+        pawn.className = 'pawn';
+        pawn.id = 'pawn' + i;
+        pawn.src = PAWN_IMAGES[p.pawnIndex];
+        pawn.onerror = function() {
+            this.src = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><circle cx='20' cy='20' r='18' fill='${encodeURIComponent(PAWN_COLORS[i])}' stroke='white' stroke-width='2'/><text x='20' y='26' text-anchor='middle' fill='white' font-size='14' font-weight='bold'>${i+1}</text></svg>`;
+        };
+        // Position off-board initially
+        pawn.style.left = (10 + i * 30) + 'px';
+        pawn.style.bottom = '-40px';
+        board.appendChild(pawn);
+    });
+}
+
+// ========== BOARD COORDINATE CALCULATION ==========
+function getCellCoords(cellNum) {
+    if (cellNum <= 0) return { x: 0, y: 100 };
+    if (cellNum > 100) cellNum = 100;
+    
+    const boardEl = document.getElementById('boardContainer');
+    const bw = boardEl.offsetWidth;
+    const bh = boardEl.offsetHeight;
+    
+    const cellW = bw / 10;
+    const cellH = bh / 10;
+    
+    // Determine row and column
+    // Row 0 = bottom (cells 1-10), Row 9 = top (cells 91-100)
+    const row = Math.floor((cellNum - 1) / 10);
+    const colIndex = (cellNum - 1) % 10;
+    
+    // Even rows (0,2,4,6,8) go left-to-right
+    // Odd rows (1,3,5,7,9) go right-to-left
+    let col;
+    if (row % 2 === 0) {
+        col = colIndex;
+    } else {
+        col = 9 - colIndex;
+    }
+    
+    const x = col * cellW + cellW / 2 - 16; // center pawn (32px wide / 2)
+    const y = bh - (row + 1) * cellH + cellH / 2 - 16;
+    
+    return { x, y };
+}
+
+function movePawnTo(playerIdx, position) {
+    const pawn = document.getElementById('pawn' + playerIdx);
+    if (!pawn) return;
+    
+    // Offset pawns slightly so they don't overlap
+    const offsets = [
+        {dx: -6, dy: -6},
+        {dx: 6, dy: -6},
+        {dx: -6, dy: 6},
+        {dx: 6, dy: 6}
+    ];
+    
+    if (position <= 0) {
+        pawn.style.left = (10 + playerIdx * 35) + 'px';
+        pawn.style.top = '';
+        pawn.style.bottom = '-40px';
+        return;
+    }
+    
+    const coords = getCellCoords(position);
+    const off = offsets[playerIdx] || {dx:0,dy:0};
+    
+    pawn.style.bottom = '';
+    pawn.style.left = (coords.x + off.dx) + 'px';
+    pawn.style.top = (coords.y + off.dy) + 'px';
+}
+
+// ========== DICE ==========
+function rollDice() {
+    if (isRolling || gameEnded) return;
+    
+    const currentPlayer = players[currentPlayerIndex];
+    if (currentPlayer.finished) {
+        nextTurn();
+        return;
+    }
+    
+    isRolling = true;
+    
+    // Play bismillah on first roll
+    if (firstRoll) {
+        playSound('sfxBismillah');
+        firstRoll = false;
+    }
+    
+    playSound('sfxDadu');
+    
+    const dice = document.getElementById('dice');
+    dice.classList.add('rolling');
+    
+    const diceEmojis = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+    let rollCount = 0;
+    const rollInterval = setInterval(() => {
+        dice.textContent = diceEmojis[Math.floor(Math.random() * 6)];
+        rollCount++;
+        if (rollCount > 10) {
+            clearInterval(rollInterval);
+            
+            const result = Math.floor(Math.random() * 6) + 1;
+            dice.textContent = diceEmojis[result - 1];
+            dice.classList.remove('rolling');
+            document.getElementById('diceLabel').textContent = `Dadu: ${result}`;
+            
+            addLog(`🎲 ${currentPlayer.name} mendapat dadu ${result}`);
+            
+            setTimeout(() => processMove(result), 500);
+        }
+    }, 80);
+}
+
+// ========== MOVE PROCESSING ==========
+function processMove(diceValue) {
+    const player = players[currentPlayerIndex];
+    let newPos = player.position + diceValue;
+    
+    // If position is 0 (not on board yet), start from 1
+    if (player.position === 0) {
+        newPos = diceValue;
+    }
+    
+    // Exact finish needed? No, allow going past but bounce back
+    if (newPos > 100) {
+        newPos = 100 - (newPos - 100);
+        addLog(`↩️ ${player.name} memantul ke kotak ${newPos}`);
+    }
+    
+    // Animate movement step by step
+    animateMovement(currentPlayerIndex, player.position, newPos, () => {
+        player.position = newPos;
+        updatePlayersPanel();
+        
+        // Check win
+        if (newPos === 100) {
+            handleWin(player);
+            return;
+        }
+        
+        // Check ladder
+        if (LADDERS[newPos]) {
+            addLog(`🪜 ${player.name} menemukan tangga di kotak ${newPos}!`);
+            showQuiz('ladder', newPos, LADDERS[newPos]);
+            return;
+        }
+        
+        // Check snake
+        if (SNAKES[newPos]) {
+            addLog(`🐍 ${player.name} menginjak ekor ular di kotak ${newPos}!`);
+            showQuiz('snake', newPos, SNAKES[newPos]);
+            return;
+        }
+        
+        // Normal, next turn
+        isRolling = false;
+        nextTurn();
+    });
+}
+
+function animateMovement(playerIdx, fromPos, toPos, callback) {
+    if (fromPos === 0) fromPos = 1;
+    const step = fromPos < toPos ? 1 : -1;
+    let current = fromPos;
+    
+    const interval = setInterval(() => {
+        current += step;
+        movePawnTo(playerIdx, current);
+        
+        if (current === toPos) {
+            clearInterval(interval);
+            setTimeout(callback, 300);
+        }
+    }, 200);
+}
+
+function handleWin(player) {
+    const finishedCount = players.filter(p => p.finished).length;
+    player.finished = true;
+    player.finishOrder = finishedCount + 1;
+    
+    addLog(`🏆 ${player.name} FINISH di peringkat ${player.finishOrder}!`);
+    playSound('sfxAllahuakbar');
+    
+    // Check if all finished or only one left
+    const remaining = players.filter(p => !p.finished);
+    if (remaining.length <= 1) {
+        if (remaining.length === 1) {
+            remaining[0].finishOrder = players.length;
+            remaining[0].finished = true;
+        }
+        gameEnded = true;
+        showWinScreen(players.find(p => p.finishOrder === 1));
+    } else {
+        isRolling = false;
+        nextTurn();
+    }
+}
+
+function showWinScreen(winner) {
+    document.getElementById('winnerName').textContent = winner.name;
+    document.getElementById('winOverlay').classList.add('show');
+    launchConfetti();
+}
+
+// ========== QUIZ ==========
+function showQuiz(type, fromPos, toPos) {
+    const quiz = getNextQuestion();
+    if (!quiz) {
+        // No questions left, auto-resolve
+        if (type === 'ladder') {
+            climbLadder(fromPos, toPos);
+        } else {
+            slideSnake(fromPos, toPos);
+        }
+        return;
+    }
+    
+    const overlay = document.getElementById('quizOverlay');
+    const badge = document.getElementById('quizBadge');
+    const questionEl = document.getElementById('quizQuestion');
+    const optionsEl = document.getElementById('quizOptions');
+    const resultEl = document.getElementById('quizResult');
+    
+    resultEl.className = 'quiz-result';
+    resultEl.style.display = 'none';
+    
+    badge.textContent = type === 'ladder' ? '🪜 Tangga! Jawab untuk naik!' : '🐍 Ular! Jawab untuk selamat!';
+    badge.className = 'quiz-type-badge ' + (type === 'ladder' ? 'ladder' : 'snake');
+    
+    questionEl.textContent = quiz.question;
+    
+    optionsEl.innerHTML = '';
+    const options = [
+        {letter:'A', text: quiz.optionA},
+        {letter:'B', text: quiz.optionB},
+        {letter:'C', text: quiz.optionC},
+        {letter:'D', text: quiz.optionD}
+    ].filter(o => o.text && o.text.trim() !== '');
+    
+    options.forEach(opt => {
+        const btn = document.createElement('div');
+        btn.className = 'quiz-option';
+        btn.innerHTML = `<span class="opt-letter">${opt.letter}</span><span>${opt.text}</span>`;
+        btn.onclick = () => handleAnswer(opt.letter, quiz, type, fromPos, toPos);
+        optionsEl.appendChild(btn);
+    });
+    
+    overlay.classList.add('show');
+    
+    // Start timer
+    startTimer(type, quiz, fromPos, toPos);
+}
+
+function startTimer(type, quiz, fromPos, toPos) {
+    timerValue = 15;
+    const timerEl = document.getElementById('timerCircle');
+    timerEl.textContent = timerValue;
+    timerEl.classList.remove('warning');
+    
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        timerValue--;
+        timerEl.textContent = timerValue;
+        
+        if (timerValue <= 5) {
+            timerEl.classList.add('warning');
+        }
+        
+        if (timerValue <= 0) {
+            clearInterval(timerInterval);
+            // Time's up = wrong answer
+            handleAnswer(null, quiz, type, fromPos, toPos);
+        }
+    }, 1000);
+}
+
+function handleAnswer(selected, quiz, type, fromPos, toPos) {
+    clearInterval(timerInterval);
+    
+    const player = players[currentPlayerIndex];
+    const isCorrect = selected === quiz.answer;
+    const timeUsed = 15 - timerValue;
+    
+    // Disable all options
+    document.querySelectorAll('.quiz-option').forEach(opt => {
+        opt.classList.add('disabled');
+        const letter = opt.querySelector('.opt-letter').textContent;
+        if (letter === quiz.answer) {
+            opt.classList.add('correct');
+        }
+        if (selected && letter === selected && !isCorrect) {
+            opt.classList.add('wrong');
+        }
+    });
+    
+    // Show result
+    const resultEl = document.getElementById('quizResult');
+    
+    // Log answer
+    answerLog.push({
+        playerName: player.name,
+        playerIndex: currentPlayerIndex,
+        question: quiz.question,
+        playerAnswer: selected || 'Waktu Habis',
+        correctAnswer: quiz.answer,
+        isCorrect: isCorrect,
+        timeUsed: timeUsed,
+        eventType: type,
+        position: fromPos
+    });
+    
+    if (isCorrect) {
+        player.correct++;
+        player.score += 10;
+        resultEl.className = 'quiz-result correct-result';
+        resultEl.textContent = '✅ BENAR! ' + (type === 'ladder' ? 'Kamu naik tangga!' : 'Kamu selamat dari ular!');
+        resultEl.style.display = 'block';
+        
+        playSound('sfxAlhamdulillah');
+        
+        setTimeout(() => {
+            closeQuiz();
+            if (type === 'ladder') {
+                climbLadder(fromPos, toPos);
+            } else {
+                // Selamat dari ular + maju 1
+                const safePos = Math.min(fromPos + 1, 100);
+                player.position = safePos;
+                movePawnTo(currentPlayerIndex, safePos);
+                addLog(`✅ ${player.name} selamat dari ular dan maju ke kotak ${safePos}!`);
+                updatePlayersPanel();
+                
+                if (safePos === 100) {
+                    handleWin(player);
+                } else {
+                    isRolling = false;
+                    nextTurn();
+                }
+            }
+        }, 2000);
+    } else {
+        player.wrong++;
+        resultEl.className = 'quiz-result wrong-result';
+        resultEl.textContent = selected ? 
+            `❌ SALAH! Jawaban yang benar: ${quiz.answer}` : 
+            `⏰ Waktu habis! Jawaban: ${quiz.answer}`;
+        resultEl.style.display = 'block';
+        
+        playSound('sfxAstaghfirullah');
+        
+        setTimeout(() => {
+            closeQuiz();
+            if (type === 'ladder') {
+                // Batal naik tangga, mundur 1
+                const backPos = Math.max(fromPos - 1, 1);
+                player.position = backPos;
+                movePawnTo(currentPlayerIndex, backPos);
+                addLog(`❌ ${player.name} gagal naik tangga, mundur ke kotak ${backPos}`);
+            } else {
+                // Turun ular seperti biasa
+                slideSnake(fromPos, toPos);
+            }
+            updatePlayersPanel();
+            isRolling = false;
+            nextTurn();
+        }, 2000);
+    }
+}
+
+function closeQuiz() {
+    document.getElementById('quizOverlay').classList.remove('show');
+}
+
+function climbLadder(from, to) {
+    const player = players[currentPlayerIndex];
+    player.position = to;
+    movePawnTo(currentPlayerIndex, to);
+    addLog(`🪜 ${player.name} naik tangga dari ${from} ke ${to}!`);
+    updatePlayersPanel();
+    
+    if (to === 100) {
+        handleWin(player);
+    } else {
+        isRolling = false;
+        nextTurn();
+    }
+}
+
+function slideSnake(from, to) {
+    const player = players[currentPlayerIndex];
+    player.position = to;
+    movePawnTo(currentPlayerIndex, to);
+    addLog(`🐍 ${player.name} turun ular dari ${from} ke ${to}!`);
+    updatePlayersPanel();
+    isRolling = false;
+    nextTurn();
+}
+
+function getNextQuestion() {
+    if (questionPool.length === 0) return null;
+    if (questionIndex >= questionPool.length) {
+        questionPool = shuffleArray([...gameData.questions]);
+        questionIndex = 0;
+    }
+    return questionPool[questionIndex++];
+}
+
+// ========== TURN MANAGEMENT ==========
+function nextTurn() {
+    if (gameEnded) return;
+    
+    do {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    } while (players[currentPlayerIndex].finished && !gameEnded);
+    
+    updateCurrentTurn();
+    updatePlayersPanel();
+}
+
+function updateCurrentTurn() {
+    const player = players[currentPlayerIndex];
+    document.getElementById('currentTurn').innerHTML = 
+        `🎯 Giliran: <strong>${player.name}</strong>`;
+    document.getElementById('currentTurn').style.background = 
+        `linear-gradient(135deg, ${PAWN_COLORS[player.pawnIndex]}44, ${PAWN_COLORS[player.pawnIndex]}88)`;
+}
+
+function updatePlayersPanel() {
+    const panel = document.getElementById('playersPanel');
+    panel.innerHTML = '';
+    players.forEach((p, i) => {
+        const div = document.createElement('div');
+        div.className = 'player-info' + (i === currentPlayerIndex && !gameEnded ? ' current' : '');
+        div.innerHTML = `
+            <img src="${PAWN_IMAGES[p.pawnIndex]}" onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 30 30%22><circle cx=%2215%22 cy=%2215%22 r=%2213%22 fill=%22${encodeURIComponent(PAWN_COLORS[i])}%22/></svg>'">
+            <span class="pname">${p.name} ${p.finished ? '🏁' : ''}</span>
+            <span class="ppos">📍${p.position}</span>
+            <span class="pscore">⭐${p.score}</span>
+        `;
+        panel.appendChild(div);
+    });
+}
+
+// ========== LOG ==========
+function addLog(msg) {
+    const log = document.getElementById('logArea');
+    const div = document.createElement('div');
+    div.className = 'log-item';
+    const time = new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    div.innerHTML = `<small style="color:#aaa">[${time}]</small> ${msg}`;
+    log.insertBefore(div, log.firstChild);
+}
+
+// ========== SOUND ==========
+function playSound(id) {
+    try {
+        const audio = document.getElementById(id);
+        if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(()=>{});
+        }
+    } catch(e) {}
+}
+
+// ========== REPORT ==========
+function showFinalReport() {
+    document.getElementById('winOverlay').classList.remove('show');
+    
+    const reportOverlay = document.getElementById('reportOverlay');
+    reportOverlay.classList.remove('hidden');
+    
+    document.getElementById('reportMeta').innerHTML = 
+        `<strong>${gameData.gameName}</strong> | ${gameData.topicName} | ${gameData.teacherName}<br>` +
+        `Tanggal: ${new Date().toLocaleDateString('id-ID', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}`;
+    
+    // Rank table
+    const rankBody = document.getElementById('rankBody');
+    rankBody.innerHTML = '';
+    const sorted = [...players].sort((a,b) => a.finishOrder - b.finishOrder);
+    sorted.forEach((p, i) => {
+        const tr = document.createElement('tr');
+        const medals = ['🥇','🥈','🥉','4️⃣'];
+        tr.innerHTML = `
+            <td>${medals[i] || i+1}</td>
+            <td><strong>${p.name}</strong></td>
+            <td>⭐ ${p.score}</td>
+            <td>✅ ${p.correct}</td>
+            <td>❌ ${p.wrong}</td>
+            <td>📍 ${p.position}</td>
+        `;
+        rankBody.appendChild(tr);
+    });
+    
+    // Detail table
+    const detailBody = document.getElementById('detailBody');
+    detailBody.innerHTML = '';
+    answerLog.forEach((log, i) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${i+1}</td>
+            <td>${log.playerName}</td>
+            <td>${log.question.substring(0,50)}${log.question.length>50?'...':''}</td>
+            <td>${log.playerAnswer}</td>
+            <td>${log.isCorrect ? '✅ Benar' : '❌ Salah'}</td>
+            <td>${log.timeUsed}s</td>
+        `;
+        detailBody.appendChild(tr);
+    });
+}
+
+function exportExcel() {
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet 1: Ranking
+    const rankData = players
+        .sort((a,b) => a.finishOrder - b.finishOrder)
+        .map((p, i) => ({
+            'Peringkat': i + 1,
+            'Nama Pemain': p.name,
+            'Skor': p.score,
+            'Jawaban Benar': p.correct,
+            'Jawaban Salah': p.wrong,
+            'Posisi Akhir': p.position,
+            'Urutan Finish': p.finishOrder
+        }));
+    
+    const ws1 = XLSX.utils.json_to_sheet(rankData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Peringkat');
+    
+    // Sheet 2: Detail Jawaban
+    const detailData = answerLog.map((log, i) => ({
+        'No': i + 1,
+        'Nama Pemain': log.playerName,
+        'Pertanyaan': log.question,
+        'Jawaban Pemain': log.playerAnswer,
+        'Jawaban Benar': log.correctAnswer,
+        'Status': log.isCorrect ? 'Benar' : 'Salah',
+        'Waktu (detik)': log.timeUsed,
+        'Event': log.eventType === 'ladder' ? 'Tangga' : 'Ular',
+        'Posisi': log.position
+    }));
+    
+    const ws2 = XLSX.utils.json_to_sheet(detailData);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Detail Jawaban');
+    
+    // Sheet 3: Info Game
+    const infoData = [{
+        'Nama Game': gameData.gameName,
+        'Topik': gameData.topicName,
+        'Guru': gameData.teacherName,
+        'Kelas': gameData.classLevel,
+        'Tanggal Main': new Date().toLocaleDateString('id-ID'),
+        'Jumlah Pemain': players.length,
+        'Total Soal Dijawab': answerLog.length
+    }];
+    const ws3 = XLSX.utils.json_to_sheet(infoData);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Info Game');
+    
+    // Download
+    const fileName = `Laporan_UlarTangga_${gameData.gameName.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+}
+
+async function saveResultsToFirebase() {
+    try {
+        const resultData = {
+            players: players.map(p => ({
+                name: p.name,
+                score: p.score,
+                correct: p.correct,
+                wrong: p.wrong,
+                position: p.position,
+                finishOrder: p.finishOrder
+            })),
+            answerLog: answerLog,
+            playedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+        
+        await db.collection('games').doc(gameData.id).update({
+            results: firebase.firestore.FieldValue.arrayUnion(resultData)
+        });
+        
+        showNotify('✅ Hasil berhasil disimpan ke server!', 'success');
+    } catch(err) {
+        console.error(err);
+        showNotify('❌ Gagal menyimpan: ' + err.message, 'error');
+    }
+}
+
+// Show saved reports (mode=report)
+async function showSavedReport() {
+    document.getElementById('lobbyOverlay').style.display = 'none';
+    
+    const reportOverlay = document.getElementById('reportOverlay');
+    reportOverlay.classList.remove('hidden');
+    
+    const reportCard = document.querySelector('.report-card');
+    reportCard.innerHTML = `<h2>📊 Laporan Permainan</h2>
+        <div style="text-align:center;color:#666;margin-bottom:15px;">
+            <strong>${gameData.gameName}</strong> | ${gameData.topicName} | ${gameData.teacherName}
+        </div>`;
+    
+    if (!gameData.results || gameData.results.length === 0) {
+        reportCard.innerHTML += '<p style="text-align:center;color:#888;padding:30px;">Belum ada data permainan.</p>';
+        return;
+    }
+    
+    gameData.results.forEach((result, idx) => {
+        const section = document.createElement('div');
+        section.style.cssText = 'margin:20px 0;padding:15px;background:#f8f9fa;border-radius:12px;';
+        
+        let html = `<h4 style="color:#1a5c3a;">Sesi ${idx + 1}</h4>`;
+        html += '<table class="report-table"><thead><tr><th>Peringkat</th><th>Nama</th><th>Skor</th><th>Benar</th><th>Salah</th></tr></thead><tbody>';
+        
+        const sorted = [...result.players].sort((a,b) => a.finishOrder - b.finishOrder);
+        sorted.forEach((p, i) => {
+            const medals = ['🥇','🥈','🥉','4️⃣'];
+            html += `<tr><td>${medals[i]||i+1}</td><td>${p.name}</td><td>${p.score}</td><td>${p.correct}</td><td>${p.wrong}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        
+        // Export button for this session
+        html += `<button class="btn" style="background:#ffd700;color:#1a5c3a;margin-top:10px;padding:8px 16px;font-size:12px;" onclick="exportSavedSession(${idx})">📥 Export Excel Sesi ${idx+1}</button>`;
+        
+        section.innerHTML = html;
+        reportCard.appendChild(section);
+    });
+    
+    // Make export function available
+    window.exportSavedSession = function(idx) {
+        const result = gameData.results[idx];
+        const wb = XLSX.utils.book_new();
+        
+        const rankData = [...result.players].sort((a,b)=>a.finishOrder-b.finishOrder).map((p,i)=>({
+            'Peringkat':i+1,'Nama':p.name,'Skor':p.score,'Benar':p.correct,'Salah':p.wrong
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rankData), 'Peringkat');
+        
+        if (result.answerLog) {
+            const detData = result.answerLog.map((l,i)=>({
+                'No':i+1,'Pemain':l.playerName,'Soal':l.question,'Jawaban':l.playerAnswer,
+                'Benar':l.correctAnswer,'Status':l.isCorrect?'Benar':'Salah','Waktu':l.timeUsed+'s'
+            }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detData), 'Detail');
+        }
+        
+        XLSX.writeFile(wb, `Laporan_Sesi${idx+1}_${gameData.gameName.replace(/\s+/g,'_')}.xlsx`);
+    };
+}
+
+// ========== UTILS ==========
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function showNotify(msg, type) {
+    const n = document.createElement('div');
+    n.style.cssText = `position:fixed;top:20px;right:20px;padding:15px 25px;border-radius:12px;
+        color:white;font-weight:600;z-index:99999;font-family:Poppins;font-size:14px;
+        animation:slideIn .5s ease;max-width:350px;
+        background:${type==='success'?'linear-gradient(135deg,#27ae60,#2ecc71)':'linear-gradient(135deg,#e74c3c,#c0392b)'}`;
+    n.textContent = msg;
+    document.body.appendChild(n);
+    setTimeout(()=>n.remove(), 4000);
+}
+
+// ========== CONFETTI ==========
+function launchConfetti() {
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const particles = [];
+    const colors = ['#ffd700','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff','#5f27cd','#01a3a4','#f368e0'];
+    
+    for (let i = 0; i < 150; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            w: Math.random() * 10 + 5,
+            h: Math.random() * 6 + 3,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            vy: Math.random() * 3 + 2,
+            vx: Math.random() * 2 - 1,
+            rotation: Math.random() * 360,
+            rotSpeed: Math.random() * 10 - 5
+        });
+    }
+    
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        let alive = false;
+        
+        particles.forEach(p => {
+            if (p.y < canvas.height + 20) {
+                alive = true;
+                p.y += p.vy;
+                p.x += p.vx;
+                p.rotation += p.rotSpeed;
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation * Math.PI / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+                ctx.restore();
+            }
+        });
+        
+        if (alive) requestAnimationFrame(animate);
+    }
+    animate();
+}
+
+// Responsive pawn repositioning
+window.addEventListener('resize', () => {
+    if (!gameStarted) return;
+    players.forEach((p, i) => {
+        movePawnTo(i, p.position);
+    });
+});
+</script>
+
+</body>
+</html>
