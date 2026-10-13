@@ -422,8 +422,10 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function animateMoveSteps(player, steps){
   const el = document.getElementById(player.id);
   for(let i=0;i<steps;i++){
-    if(player.pos >= 100) break;
-    player.pos += 1;
+    // Kotak finish harus dicapai dengan angka tepat. Jika dadu berlebih,
+    // pion memantul mundur satu kotak untuk setiap langkah yang tersisa.
+    if(player.pos < 100) player.pos += 1;
+    else player.pos -= 1;
     el.classList.add('moving');
     el.style.transform = 'translateY(-10%) scale(1.03)';
     updateAllPlayers(); await sleep(150);
@@ -618,7 +620,7 @@ document.getElementById('quizFile').addEventListener('change',async e=>{
 const promptText=`Bertindaklah sebagai guru PAI & Budi Pekerti SD dan penulis soal edukatif. Buat 30 soal kuis untuk game Ular Tangga Islami KKG PAI Kabupaten Bandung dengan variasi seimbang: pilihan ganda (pg), benar-salah (bs), dan anagram/isian (anagram). Materi: Al-Qur’an, hadis, akidah, akhlak, ibadah, kisah nabi; sesuai usia SD, bahasa sederhana, akurat, santun, tanpa perdebatan khilafiyah. Keluarkan HANYA CSV tanpa markdown dengan pemisah kolom berupa satu karakter backslash (\\\\). Header wajib: jenis\\\\soal\\\\opsi\\\\jawaban. Untuk pg, isi opsi dengan 4 pilihan yang dipisahkan tanda | dan jawaban harus sama persis dengan teks pilihan benar. Untuk bs, opsi "Benar|Salah" dan jawaban "Benar" atau "Salah". Untuk anagram, soal meminta menyusun huruf/kata dan jawaban berupa kata yang benar. Pastikan semua jawaban benar, tidak ada baris baru di dalam kolom, dan variasikan tingkat kesulitan.`;
 document.getElementById('showAIPrompt').addEventListener('click',()=>{const t=document.getElementById('aiPrompt');t.style.display=t.style.display==='none'?'block':'none';t.value=promptText;document.getElementById('copyPrompt').style.display=t.style.display;});
 document.getElementById('copyPrompt').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(promptText);document.getElementById('copyPrompt').textContent='Tersalin ✓'}catch(e){document.getElementById('aiPrompt').select();document.execCommand('copy')}});
-const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFwk6C0RMe9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
+const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFkKC0RMe9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
 let firebaseApp=null, firebaseAuth=null, googleProvider=null;
 try {
  if(window.firebase && !firebase.apps.length) firebaseApp=firebase.initializeApp(firebaseConfig);
@@ -631,17 +633,40 @@ function updateAdminStatus(user){
  const el=document.getElementById('adminStatus'); if(!el)return;
  el.textContent=user?`Admin aktif: ${user.email||user.displayName||'akun Google'}. Anda dapat membuat tautan soal.`:'Belum masuk. Klik Registrasi / Masuk Admin dengan Google.';
 }
+function explainAuthError(e){
+ const code=e&&e.code||'';
+ const messages={
+  'auth/unauthorized-domain':'Domain website belum diizinkan. Firebase Console → Authentication → Settings → Authorized domains, tambahkan domain hosting persis seperti yang tampil di browser.',
+  'auth/operation-not-allowed':'Login Google belum diaktifkan. Firebase Console → Authentication → Sign-in method → Google → Enable.',
+  'auth/invalid-api-key':'API key Firebase tidak valid. Salin apiKey persis dari Project settings → General → Your apps.',
+  'auth/api-key-not-valid.-please-pass-a-valid-api-key.':'API key Firebase tidak valid. Salin apiKey persis dari Project settings → General → Your apps.',
+  'auth/network-request-failed':'Koneksi internet gagal menghubungi Firebase. Periksa jaringan, DNS, atau pemblokir iklan.',
+  'auth/popup-blocked':'Browser memblokir jendela login. Coba izinkan pop-up atau gunakan tombol login kembali.',
+  'auth/cancelled-popup-request':'Permintaan login sebelumnya dibatalkan. Coba login kembali.'
+ };
+ return messages[code]||((e&&e.message)||'Kesalahan login tidak diketahui')+(code?' ['+code+']':'');
+}
 document.getElementById('adminLogin').addEventListener('click',async()=>{
  const btn=document.getElementById('adminLogin'),status=document.getElementById('adminStatus');
  try{
-  if(!firebaseAuth)throw Error('SDK Firebase tidak termuat. Pastikan internet aktif dan domain aplikasi diizinkan di Firebase Authentication.');
-  if(currentUser()){await firebaseAuth.signOut();btn.textContent='🔐 Registrasi / Masuk Admin dengan Google';updateAdminStatus(null);return;}
-  btn.disabled=true;status.textContent='Membuka login Google...';
-  const result=await firebaseAuth.signInWithPopup(googleProvider);
-  updateAdminStatus(result.user);btn.textContent='Keluar dari akun Admin';
- }catch(e){status.textContent='Login gagal: '+(e.message||e);if(e.code==='auth/unauthorized-domain')status.textContent+=' Tambahkan domain hosting pada Firebase Console → Authentication → Settings → Authorized domains.';}
- finally{btn.disabled=false;}
+  if(!firebaseAuth)throw Error('SDK Firebase tidak termuat. Pastikan internet aktif dan Firebase SDK dapat diakses.');
+  if(currentUser()){
+   await firebaseAuth.signOut();
+   btn.textContent='🔐 Registrasi / Masuk Admin dengan Google';
+   updateAdminStatus(null);return;
+  }
+  btn.disabled=true;
+  status.textContent='Mengalihkan ke halaman login Google. Setelah memilih akun, Anda akan kembali ke aplikasi…';
+  await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+  // Redirect lebih stabil daripada popup pada hosting tertentu / browser yang memblokir popup.
+  await firebaseAuth.signInWithRedirect(googleProvider);
+ }catch(e){status.textContent='Login gagal: '+explainAuthError(e);btn.disabled=false;}
 });
+if(firebaseAuth){
+ firebaseAuth.getRedirectResult().then(result=>{
+  if(result&&result.user)updateAdminStatus(result.user);
+ }).catch(e=>{const status=document.getElementById('adminStatus');if(status)status.textContent='Login Google gagal: '+explainAuthError(e);});
+}
 if(firebaseAuth)firebaseAuth.onAuthStateChanged(user=>{
  updateAdminStatus(user);
  const b=document.getElementById('adminLogin');if(b)b.textContent=user?'Keluar dari akun Admin':'🔐 Registrasi / Masuk Admin dengan Google';
