@@ -205,9 +205,17 @@
             <small id="roomStatus" aria-live="polite">Mode offline siap. Online membutuhkan login Google dan Firebase Rules yang aman.</small>
           </div>
           <small id="shareStatus"></small>
-          <textarea id="aiPrompt" rows="5" style="display:none" readonly></textarea>
+          <div id="aiPromptSettings" style="display:none;border:1px solid #d9e5dc;border-radius:10px;padding:10px;margin-top:8px;background:#f8fcf8">
+            <label for="aiSubject">Mata pelajaran</label><input id="aiSubject" type="text" value="Pendidikan Agama Islam dan Budi Pekerti" placeholder="Contoh: IPAS, Matematika, PAI">
+            <label for="aiGrade">Jenjang/kelas</label><input id="aiGrade" type="text" value="SD kelas 4" placeholder="Contoh: SD kelas 5 / SMP kelas 7">
+            <label for="aiMaterial">Materi/topik spesifik</label><input id="aiMaterial" type="text" value="Surah Al-Insyirah, hukum bacaan ghunnah, Asmaulhusna, adab bertetangga, zakat, toleransi dan kisah sahabat Nabi" placeholder="Tuliskan materi yang ingin dibuatkan soal">
+            <label for="aiTotal">Jumlah soal</label><input id="aiTotal" type="number" min="3" max="200" value="70">
+            <label for="aiDistribution">Komposisi soal</label><input id="aiDistribution" type="text" value="Pilihan ganda 30, benar-salah 20, anagram/isian 20" placeholder="Contoh: 50 PG, 30 benar-salah, 20 anagram">
+            <button id="buildAIPrompt" type="button" class="primary">Buat Prompt Sesuai Isian</button>
+          </div>
+          <textarea id="aiPrompt" rows="8" style="display:none" readonly></textarea>
           <button id="copyPrompt" type="button" style="display:none">Salin Prompt</button>
-          <small id="questionCount">Soal bawaan aktif: 6 soal contoh. Impor CSV untuk mengganti/menambah soal.</small>
+          <small id="questionCount">Soal bawaan aktif: 70 soal dari file soal ut.csv (30 pilihan ganda, 20 benar-salah, 20 anagram). Impor CSV lain untuk mengganti soal sesuai mapel/materi.</small>
         </div>
 
         <footer>KKG PAI Kabupaten Bandung • Simpan semua aset dalam satu folder agar mode offline berjalan.</footer>
@@ -454,14 +462,7 @@ let quizSeconds=15, customQuestions=[];
 let quizDeck=[], lastQuestionKey="";
 function resetQuizShuffle(){quizDeck=[];lastQuestionKey=""}
 function nextQuestion(){const bank=activeQuestions();if(!bank.length)return sampleQuestions[0];if(!quizDeck.length){quizDeck=bank.map((_,i)=>i);for(let i=quizDeck.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizDeck[i],quizDeck[j]]=[quizDeck[j],quizDeck[i]];}if(quizDeck.length>1&&String(bank[quizDeck[quizDeck.length-1]].q)===lastQuestionKey){[quizDeck[0],quizDeck[quizDeck.length-1]]=[quizDeck[quizDeck.length-1],quizDeck[0]];}}const q=bank[quizDeck.pop()];lastQuestionKey=String(q.q);return q;}
-const sampleQuestions=[
- {type:'pg',q:'Surah pembuka dalam Al-Qur’an adalah ...',options:['Al-Fatihah','Al-Ikhlas','An-Nas','Al-Falaq'],answer:'Al-Fatihah'},
- {type:'bs',q:'Membantu teman yang kesulitan termasuk akhlak terpuji.',options:['Benar','Salah'],answer:'Benar'},
- {type:'anagram',q:'Susun huruf berikut menjadi kata Islami: MASLAA',answer:'SALAM'},
- {type:'pg',q:'Berapa jumlah rukun Islam?',options:['3','4','5','6'],answer:'5'},
- {type:'bs',q:'Kita dianjurkan berkata jujur.',options:['Benar','Salah'],answer:'Benar'},
- {type:'anagram',q:'Susun huruf menjadi nama kitab suci umat Islam: URANQ',answer:'QURAN'}
-];
+const sampleQuestions=[{"type":"pg","q":"Surah Al-Insyirah dalam Al-Qur'an terdiri dari berapa ayat?","options":["6 ayat","7 ayat","8 ayat","9 ayat"],"answer":"8 ayat"},{"type":"pg","q":"Surah Al-Insyirah tergolong surah Makkiyah karena diturunkan di kota?","options":["Makkah","Madina","Jeddah","Taif"],"answer":"Makkah"},{"type":"pg","q":"Apa arti dari kata Al-Insyirah secara bahasa?","options":["Kemenangan","Pertolongan","Kelapangan","Keindahan"],"answer":"Kelapangan"},{"type":"pg","q":"Hukum bacaan Ghunnah terjadi apabila terdapat huruf yang bertasydid, yaitu?","options":["Alif dan Lam","Nun dan Mim","Ba dan Ta","Sin dan Syin"],"answer":"Nun dan Mim"},{"type":"pg","q":"Bagaimana cara membaca hukum tajwid Ghunnah yang benar?","options":["Dibaca memantul dengan keras","Dibaca mendengung dan ditahan 2-3 ketukan","Dibaca samar-samar di bibir","Dibaca jelas tanpa ditahan"],"answer":"Dibaca mendengung dan ditahan 2-3 ketukan"},{"type":"pg","q":"Di manakah tempat keluarnya suara dengung (al-khaisyum) pada bacaan Ghunnah?","options":["Pangkal hidung","Rongga mulut","Tenggorokan","Ujung lidah"],"answer":"Pangkal hidung"},{"type":"pg","q":"Dalam Surah Al-Insyirah, janji Allah tentang kemudahan bersama kesulitan diulang sebanyak?","options":["1 kali","2 kali","3 kali","4 kali"],"answer":"2 kali"},{"type":"pg","q":"Huruf hijaiyah berikut yang TIDAK dapat menyambung ke huruf setelahnya adalah?","options":["Huruf Ba","Huruf Ta","Huruf Dal","Huruf Sin"],"answer":"Huruf Dal"},{"type":"pg","q":"Asmaulhusna al-Waliy memiliki arti bahwa Allah Maha?","options":["Maha Adil","Maha Pelindung","Maha Terpuji","Maha Sabar"],"answer":"Maha Pelindung"},{"type":"pg","q":"Asmaulhusna al-Hamid memiliki arti bahwa Allah Maha?","options":["Maha Adil","Maha Sabar","Maha Terpuji","Maha Pengasih"],"answer":"Maha Terpuji"},{"type":"pg","q":"Asmaulhusna al-'Adl memiliki arti bahwa Allah Maha?","options":["Maha Bijaksana","Maha Adil","Maha Mengetahui","Maha Pembalas"],"answer":"Maha Adil"},{"type":"pg","q":"Asmaulhusna as-Sabur memiliki arti bahwa Allah Maha?","options":["Maha Sabar","Maha Penyayang","Maha Suci","Maha Pelindung"],"answer":"Maha Sabar"},{"type":"pg","q":"Mengucapkan lafal Alhamdulillah saat mendapat nikmat adalah bentuk pengamalan Asmaulhusna?","options":["al-Waliy","al-Hamid","al-'Adl","as-Sabur"],"answer":"al-Hamid"},{"type":"pg","q":"Menolong teman yang jatuh dan menjaganya dari perundungan mencerminkan Asmaulhusna?","options":["al-Waliy","al-Hamid","as-Sabur","al-'Adl"],"answer":"al-Waliy"},{"type":"pg","q":"Membagi tugas piket kelas secara rata dan jujur tanpa pilih kasih mencerminkan Asmaulhusna?","options":["al-Waliy","al-Hamid","al-'Adl","as-Sabur"],"answer":"al-'Adl"},{"type":"pg","q":"Tetap tenang dan tidak membalas saat diejek teman melainkan menasihati dengan baik mencerminkan Asmaulhusna?","options":["as-Sabur","al-Hamid","al-Waliy","al-'Adl"],"answer":"as-Sabur"},{"type":"pg","q":"Orang atau keluarga yang tempat tinggalnya berdekatan dengan rumah kita disebut?","options":["Saudara","Tetangga","Tamu","Kerabat"],"answer":"Tetangga"},{"type":"pg","q":"Surah dalam Al-Qur'an yang mengajarkan prinsip toleransi Untukmu agamamu, dan untukku agamaku adalah?","options":["Surah Al-Ikhlas","Surah Al-Kafirun","Surah Al-Falaq","Surah Al-Ma'un"],"answer":"Surah Al-Kafirun"},{"type":"pg","q":"Kebersihan adalah sebagian dari iman. Dalam bahasa Arab kebersihan adalah bagian dari iman disebut?","options":["An-Nadhāfatu minal īmān","Al-Jannatu tahta aqdāmil ummahāt","Man jadda wajada","Thalabul 'ilmi farīdhatun"],"answer":"An-Nadhāfatu minal īmān"},{"type":"pg","q":"Kegiatan gotong royong membersihkan selokan lingkungan bersama warga berbeda agama termasuk kegiatan?","options":["Muamalah sosial","Ibadah mahdhah","Ritual keagamaan","Akidah Islam"],"answer":"Muamalah sosial"},{"type":"pg","q":"Zakat merupakan rukun Islam yang ke?","options":["Pertama","Kedua","Ketiga","Keempat"],"answer":"Ketiga"},{"type":"pg","q":"Zakat jiwa yang wajib dikeluarkan setiap muslim pada bulan Ramadan berupa makanan pokok disebut?","options":["Zakat Maal","Zakat Fitrah","Zakat Profesi","Zakat An'am"],"answer":"Zakat Fitrah"},{"type":"pg","q":"Kadar zakat fitrah yang wajib dikeluarkan untuk setiap jiwa di Indonesia adalah beras sebanyak?","options":["1,5 kg","2,0 kg","2,5 kg","4,0 kg"],"answer":"2,5 kg"},{"type":"pg","q":"Orang yang berhak menerima zakat sesuai Surah At-Taubah ayat 60 terdiri dari berapa golongan?","options":["6 golongan","7 golongan","8 golongan","9 golongan"],"answer":"8 golongan"},{"type":"pg","q":"Petugas yang bertugas mengumpulkan, mencatat, dan menyalurkan zakat disebut?","options":["Muzakki","Mustahik","Amil","Mualaf"],"answer":"Amil"},{"type":"pg","q":"Orang yang mengeluarkan zakat dinamakan?","options":["Muzakki","Mustahik","Amil","Gharim"],"answer":"Muzakki"},{"type":"pg","q":"Mengeluarkan sebagian harta secara sukarela untuk kebaikan tanpa batasan nisab disebut?","options":["Zakat fitrah","Zakat maal","Infak","Fidyah"],"answer":"Infak"},{"type":"pg","q":"Khalifah pertama pengganti kepemimpinan Rasulullah SAW adalah?","options":["Abu Bakar Ash-Shiddiq","Umar bin Khattab","Utsman bin Affan","Ali bin Abi Thalib"],"answer":"Abu Bakar Ash-Shiddiq"},{"type":"pg","q":"Sahabat Nabi yang mendapat julukan Al-Faruq (pembeda antara hak dan batil) adalah?","options":["Abu Bakar Ash-Shiddiq","Umar bin Khattab","Utsman bin Affan","Ali bin Abi Thalib"],"answer":"Umar bin Khattab"},{"type":"pg","q":"Penetapan awal kalender Hijriah pertama kali diprakarsai oleh Khalifah?","options":["Abu Bakar Ash-Shiddiq","Umar bin Khattab","Utsman bin Affan","Ali bin Abi Thalib"],"answer":"Umar bin Khattab"},{"type":"bs","q":"Surah Al-Insyirah terdiri dari 10 ayat.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Huruf Mim bertasydid dibaca mendengung lewat pangkal hidung.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Huruf Alif termasuk huruf hijaiyah yang tidak dapat menyambung ke huruf sesudahnya.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Asmaulhusna al-Waliy berarti Allah Maha Penyabar.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Asmaulhusna al-Hamid mengajarkan kita untuk selalu bersyukur dan tidak sombong.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Sikap pilih kasih saat membagi kelompok belajar termasuk pengamalan sifat al-'Adl.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Kita hanya wajib menghormati tetangga yang kaya dan sesuku saja.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Membuang sampah di depan rumah tetangga melanggar adab bertetangga.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Islam melarang umatnya untuk bersikap ramah dan bersosialisasi dengan warga non-Muslim.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Bekerja sama dalam kegiatan kerja bakti lingkungan pemukiman sangat dianjurkan dalam Islam.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Zakat fitrah boleh dibayarkan setelah shalat Idul Fitri dan nilainya tetap sebagai zakat fitrah.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Mualaf atau orang yang baru masuk Islam berhak menerima zakat.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Nisab adalah batas minimum jumlah harta yang menyebabkan harta wajib dizakati.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Senyuman yang ikhlas kepada teman tidak bernilai sedekah karena tidak menggunakan uang.","options":["Benar","Salah"],"answer":"Salah"},{"type":"bs","q":"Khalifah Abu Bakar Ash-Shiddiq diprakarsai mengumpulkan lembaran Al-Qur'an menjadi satu mushaf.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Ketua panitia pengumpul Al-Qur'an pada masa Abu Bakar adalah Zaid bin Tsabit.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Lembaga kas negara yang dibentuk pada masa Umar bin Khattab dinamakan Baitul Maal.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Mengakui kesalahan dan berkata jujur saat tidak sengaja merusak barang teman adalah teladan sifat Ash-Shiddiq.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Umar bin Khattab pernah memikul sendiri karung gandum untuk keluarga miskin yang kelaparan.","options":["Benar","Salah"],"answer":"Benar"},{"type":"bs","q":"Khalifah Abu Bakar meminta rakyat untuk mengoreksinya jika ia berbuat salah.","options":["Benar","Salah"],"answer":"Benar"},{"type":"anagram","q":"Susun huruf (H - N - U - N - A - G) menjadi hukum tajwid yang berarti suara mendengung!","options":[],"answer":"GHUNNAH"},{"type":"anagram","q":"Susun huruf (Y - H - S - I - I - R - A - N) menjadi nama surah ke-94 Al-Qur'an!","options":[],"answer":"INSYIRAH"},{"type":"anagram","q":"Susun kata (P - E - L - A - N - G - A - N - K - A) menjadi arti dari kata Al-Insyirah!","options":[],"answer":"KELAPANGAN"},{"type":"anagram","q":"Susun huruf (A - W - Y - I - L) menjadi Asmaulhusna yang berarti Maha Pelindung!","options":[],"answer":"WALIY"},{"type":"anagram","q":"Susun huruf (A - H - D - I - M) menjadi Asmaulhusna yang berarti Maha Terpuji!","options":[],"answer":"HAMID"},{"type":"anagram","q":"Susun huruf (D - A - L) menjadi Asmaulhusna yang berarti Maha Adil!","options":[],"answer":"ADL"},{"type":"anagram","q":"Susun huruf (B - R - S - U - A) menjadi Asmaulhusna yang berarti Maha Sabar!","options":[],"answer":"SABUR"},{"type":"anagram","q":"Susun huruf (G - E - T - N - A - T - G - A) menjadi sebutan orang yang rumahnya berdekatan dengan kita!","options":[],"answer":"TETANGGA"},{"type":"anagram","q":"Susun kata (I - O - L - A - R - E - N - S - T) menjadi sikap menghargai perbedaan agama!","options":[],"answer":"TOLERANSI"},{"type":"anagram","q":"Susun huruf (H - U - L - M - A - A- A - M) menjadi urusan kemasyarakatan dalam Islam!","options":[],"answer":"MUAMALAH"},{"type":"anagram","q":"Susun huruf (A - I - H - R - F - T) menjadi jenis zakat jiwa yang dikeluarkan saat Ramadan!","options":[],"answer":"FITRAH"},{"type":"anagram","q":"Susun huruf (A - L - A - M) menjadi jenis zakat harta simpanan!","options":[],"answer":"MAAL"},{"type":"anagram","q":"Susun huruf (K - U - S - T - I - H - A - M) menjadi sebutan untuk orang yang berhak menerima zakat!","options":[],"answer":"MUSTAHIK"},{"type":"anagram","q":"Susun huruf (L - I - M - A) menjadi sebutan untuk pengurus pengumpul zakat!","options":[],"answer":"AMIL"},{"type":"anagram","q":"Susun huruf (N - F - A - K - I) menjadi amalan mengeluarkan harta sukarela untuk kebaikan!","options":[],"answer":"INFAK"},{"type":"anagram","q":"Susun huruf (A - S - H - E - D - E - K) menjadi amalan kebaikan materi maupun non-materi!","options":[],"answer":"SEDEKAH"},{"type":"anagram","q":"Susun kata (Q - S - I - D - D - I - H) menjadi gelar Khalifah Abu Bakar yang berarti jujur!","options":[],"answer":"SHIDDIQ"},{"type":"anagram","q":"Susun kata (R - U - Q - F - A) menjadi gelar Khalifah Umar yang berarti pembeda benar dan salah!","options":[],"answer":"FARUQ"},{"type":"anagram","q":"Susun huruf (S - H - A - F - M - U) menjadi sebutan untuk kumpulan lembaran Al-Qur'an!","options":[],"answer":"MUSHAF"},{"type":"anagram","q":"Susun kata (J - R - I - A - H - H - I) menjadi nama penanggalan kalender Islam!","options":[],"answer":"HIJRIAH"}];
 function activeQuestions(){return customQuestions.length?customQuestions:sampleQuestions}
 function parseCSVLine(line,sep='\\'){
  const out=[];let cur='',quoted=false;
@@ -473,18 +474,25 @@ function normalizeType(t){t=(t||'').toLowerCase().trim();if(/benar|salah|bs|true
 function importQuestions(text){
  const lines=text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(x=>x.trim());
  if(lines.length<2)throw Error('CSV harus memiliki baris judul dan minimal satu soal.');
- const head=parseCSVLine(lines[0]).map(x=>x.toLowerCase());
- const idx=(names)=>head.findIndex(x=>names.includes(x));
- const ti=idx(['jenis','tipe','type']), qi=idx(['soal','pertanyaan','question']), oi=idx(['opsi','pilihan','pilihan_a_d','options']), ai=idx(['jawaban','kunci','answer']);
- if(qi<0||ai<0)throw Error('Kolom wajib: soal dan jawaban. Kolom jenis opsional.');
  const result=[];
- lines.slice(1).forEach(line=>{const c=parseCSVLine(line);if(!c[qi])return;const type=normalizeType(ti>=0?c[ti]:'pg');let options=[];
- if(oi>=0&&c[oi]) options=c[oi].split('|').map(x=>x.trim()).filter(Boolean);
- else if(type==='pg') options=['A','B','C','D'].map(k=>{const j=head.indexOf(k.toLowerCase());return j>=0?c[j]:''}).filter(Boolean);
- result.push({type,q:c[qi],options,answer:c[ai].trim()});
+ lines.slice(1).forEach(rawLine=>{
+  let line=rawLine.trim();
+  // Be tolerant of spreadsheet exports that wrap an entire row in quotes.
+  if(line.startsWith('"')&&line.endsWith('"'))line=line.slice(1,-1).replace(/""/g,'"');
+  let c=parseCSVLine(line,'\\');
+  let type='',q='',options=[],answer='';
+  if(c.length>=4){type=normalizeType(c[0]);q=c[1];options=c[2]?c[2].split('|').map(x=>x.trim()).filter(Boolean):[];answer=c.slice(3).join('\\').trim();}
+  else if(c.length===2 && /^(bs|benar|salah)$/i.test(c[0])){type='bs';const parts=c[1].split('|').map(x=>x.trim());q=parts[0]||'';answer=parts[parts.length-1]||'';options=['Benar','Salah'];}
+  else if(c.length===3 && /^(anagram|isian|susun)$/i.test(c[0])){type='anagram';q=c[1];const parts=(c[2]||'').split('|').map(x=>x.trim());answer=parts[parts.length-1]||'';options=[];}
+  else if(c.length>=2){type=normalizeType(c[0]);q=c[1]||'';answer=c[c.length-1]||'';options=type==='bs'?['Benar','Salah']:(type==='anagram'?[]:(c[2]||'').split('|').map(x=>x.trim()).filter(Boolean));}
+  if(!q||!answer)return;
+  if(type==='bs')options=['Benar','Salah'];if(type==='anagram')options=[];
+  result.push({type,q,options,answer:answer.trim()});
  });
- if(!result.length)throw Error('Tidak ada soal yang bisa dibaca.');customQuestions=result;resetQuizShuffle();
- document.getElementById('questionCount').textContent=`Soal kustom aktif: ${result.length} soal.`;return result.length;
+ if(!result.length)throw Error('Tidak ada soal yang bisa dibaca. Periksa format: jenis\\soal\\opsi\\jawaban.');
+ customQuestions=result;resetQuizShuffle();
+ document.getElementById('questionCount').textContent=`Soal kustom aktif: ${result.length} soal (menggantikan soal bawaan).`;
+ return result.length;
 }
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function askQuiz(player,kind){
@@ -608,6 +616,7 @@ window.addEventListener('resize', ()=> updateAllPlayers());
 
 /* ---------- Branding, file soal, dan tautan online ---------- */
 document.getElementById('enterGame').addEventListener('click',()=>{document.getElementById('cover').style.display='none';try{playSfx('bismillah')}catch(e){}});
+document.getElementById('questionCount').textContent=`Soal bawaan aktif: ${sampleQuestions.length} soal dari soal ut.csv (30 pilihan ganda, 20 benar-salah, 20 anagram). Impor CSV lain untuk mengganti soal.`;
 document.getElementById('downloadTemplate').addEventListener('click',()=>{
  const csv='jenis\\soal\\opsi\\jawaban\npg\\Surah pembuka Al-Qur’an adalah ...\\Al-Fatihah|Al-Ikhlas|An-Nas|Al-Falaq\\Al-Fatihah\nbs\\Berkata jujur adalah akhlak terpuji.\\Benar|Salah\\Benar\nanagram\\Susun huruf menjadi kata: MASLAA\\\\\\SALAM';
  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='template-soal-ular-tangga.csv';a.click();URL.revokeObjectURL(url);
@@ -617,10 +626,23 @@ document.getElementById('quizFile').addEventListener('change',async e=>{
  try{const count=importQuestions(await file.text());document.getElementById('message').textContent=`Berhasil memuat ${count} soal kustom.`}
  catch(err){alert('Gagal membaca CSV: '+err.message)}
 });
-const promptText=`Bertindaklah sebagai guru PAI & Budi Pekerti SD dan penulis soal edukatif. Buat 30 soal kuis untuk game Ular Tangga Islami KKG PAI Kabupaten Bandung dengan variasi seimbang: pilihan ganda (pg), benar-salah (bs), dan anagram/isian (anagram). Materi: Al-Qur’an, hadis, akidah, akhlak, ibadah, kisah nabi; sesuai usia SD, bahasa sederhana, akurat, santun, tanpa perdebatan khilafiyah. Keluarkan HANYA CSV tanpa markdown dengan pemisah kolom berupa satu karakter backslash (\\\\). Header wajib: jenis\\\\soal\\\\opsi\\\\jawaban. Untuk pg, isi opsi dengan 4 pilihan yang dipisahkan tanda | dan jawaban harus sama persis dengan teks pilihan benar. Untuk bs, opsi "Benar|Salah" dan jawaban "Benar" atau "Salah". Untuk anagram, soal meminta menyusun huruf/kata dan jawaban berupa kata yang benar. Pastikan semua jawaban benar, tidak ada baris baru di dalam kolom, dan variasikan tingkat kesulitan.`;
-document.getElementById('showAIPrompt').addEventListener('click',()=>{const t=document.getElementById('aiPrompt');t.style.display=t.style.display==='none'?'block':'none';t.value=promptText;document.getElementById('copyPrompt').style.display=t.style.display;});
-document.getElementById('copyPrompt').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(promptText);document.getElementById('copyPrompt').textContent='Tersalin ✓'}catch(e){document.getElementById('aiPrompt').select();document.execCommand('copy')}});
-const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFkWK0CRm9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
+function buildQuestionPrompt(){
+ const subject=document.getElementById('aiSubject').value.trim()||'mata pelajaran yang ditentukan';
+ const grade=document.getElementById('aiGrade').value.trim()||'jenjang yang ditentukan';
+ const material=document.getElementById('aiMaterial').value.trim()||'materi yang relevan dengan mata pelajaran';
+ const total=Math.max(3,Math.min(200,Number(document.getElementById('aiTotal').value)||70));
+ const distribution=document.getElementById('aiDistribution').value.trim()||'Pilihan ganda, benar-salah, dan anagram/isian';
+ return `Anda adalah guru ahli ${subject} dan penyusun asesmen untuk ${grade}. Buat tepat ${total} soal berdasarkan materi berikut: ${material}. Komposisi yang diminta: ${distribution}. Pastikan jumlah seluruh jenis tepat ${total}; bila komposisi yang ditulis tidak berjumlah ${total}, sesuaikan secara proporsional dan tulis jumlah aktual tiap jenis hanya dalam pemeriksaan internal, bukan di luar CSV.\n\nKELUARAN WAJIB: keluarkan HANYA teks CSV polos, tanpa markdown, tanpa code fence, tanpa pengantar, tanpa nomor baris tambahan, dan tanpa penjelasan setelah CSV. Gunakan satu karakter garis miring terbalik (backslash \u005c) sebagai pemisah empat kolom. Header harus persis:\njenis\u005csoal\u005copsi\u005cjawaban\n\nFORMAT SETIAP BARIS:\n1) Pilihan ganda: pg\u005cteks pertanyaan\u005cpilihan A|pilihan B|pilihan C|pilihan D\u005cteks jawaban benar. Wajib tepat 4 opsi berbeda, dan jawaban harus identik persis dengan salah satu opsi.\n2) Benar-salah: bs\u005cpernyataan yang dapat dinilai benar atau salah\u005cBenar|Salah\u005cBenar ATAU Salah. Jangan menaruh tanda | di dalam pernyataan.\n3) Anagram/isian: anagram\u005cSusun huruf: [huruf acak] menjadi [petunjuk jelas]\u005c\u005cteks jawaban. Kolom opsi dikosongkan; jawaban hanya kata/frasa yang harus diketik peserta. Huruf acak harus benar-benar dapat disusun menjadi jawaban.\n\nATURAN VALIDASI: gunakan pemisah kolom backslash, bukan koma atau titik koma; gunakan tanda | hanya untuk memisahkan opsi PG dan nilai Benar|Salah; jangan membungkus seluruh baris dengan tanda kutip; jangan membuat baris baru di dalam satu soal; jangan menambahkan kolom; hindari backslash di dalam teks soal; pastikan semua baris memiliki 4 kolom; variasikan tingkat kesulitan sesuai jenjang; bahasa Indonesia yang jelas; tidak mengulang pertanyaan; semua kunci jawaban akurat dan cocok dengan pertanyaannya. Untuk ${subject}, jangan mengarang fakta atau membuat soal di luar materi yang ditentukan.`;
+}
+function showPromptBuilder(){
+ const panel=document.getElementById('aiPromptSettings');
+ const opening=panel.style.display==='none';panel.style.display=opening?'block':'none';
+ if(opening){document.getElementById('aiPrompt').style.display='block';document.getElementById('aiPrompt').value=buildQuestionPrompt();document.getElementById('copyPrompt').style.display='inline-block';}
+}
+document.getElementById('showAIPrompt').addEventListener('click',showPromptBuilder);
+document.getElementById('buildAIPrompt').addEventListener('click',()=>{document.getElementById('aiPrompt').value=buildQuestionPrompt();document.getElementById('aiPrompt').style.display='block';document.getElementById('copyPrompt').style.display='inline-block';document.getElementById('copyPrompt').textContent='Salin Prompt';});
+document.getElementById('copyPrompt').addEventListener('click',async()=>{const prompt=document.getElementById('aiPrompt').value;try{await navigator.clipboard.writeText(prompt);document.getElementById('copyPrompt').textContent='Tersalin ✓'}catch(e){document.getElementById('aiPrompt').select();document.execCommand('copy');document.getElementById('copyPrompt').textContent='Salin Prompt';}});
+const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFkKC0RMe9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
 let firebaseApp=null, firebaseAuth=null, googleProvider=null;
 try {
  if(window.firebase && !firebase.apps.length) firebaseApp=firebase.initializeApp(firebaseConfig);
@@ -649,34 +671,36 @@ function explainAuthError(e){
 document.getElementById('adminLogin').addEventListener('click',async()=>{
  const btn=document.getElementById('adminLogin'),status=document.getElementById('adminStatus');
  try{
-  if(!firebaseAuth)throw Error('SDK Firebase tidak termuat. Pastikan internet aktif dan Firebase SDK dapat diakses.');
+  if(!firebaseAuth)throw Error('Firebase belum siap. Periksa koneksi internet.');
   if(currentUser()){
-   await firebaseAuth.signOut();
-   btn.textContent='🔐 Registrasi / Masuk Admin dengan Google';
-   updateAdminStatus(null);return;
+   await firebaseAuth.signOut();btn.textContent='🔐 Registrasi / Masuk Admin dengan Google';updateAdminStatus(null);return;
   }
-  btn.disabled=true;
-  status.textContent='Mengalihkan ke halaman login Google. Setelah memilih akun, Anda akan kembali ke aplikasi…';
+  btn.disabled=true;status.textContent='Membuka login Google…';
   await firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-  // Redirect lebih stabil daripada popup pada hosting tertentu / browser yang memblokir popup.
-  await firebaseAuth.signInWithRedirect(googleProvider);
- }catch(e){status.textContent='Login gagal: '+explainAuthError(e);btn.disabled=false;}
+  try{
+   await firebaseAuth.signInWithPopup(googleProvider);
+   const user=currentUser();
+   if(user){updateAdminStatus(user);const cover=document.getElementById('cover');if(cover)cover.style.display='none';status.textContent=`Login berhasil — Admin aktif: ${user.email||user.displayName||'akun Google'}.`;}
+  }catch(popupError){
+   if(popupError&&['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].includes(popupError.code)){
+    sessionStorage.setItem('ut_resume_game_after_login','1');status.textContent='Mengarahkan ke login Google…';await firebaseAuth.signInWithRedirect(googleProvider);return;
+   }
+   throw popupError;
+  }
+ }catch(e){status.textContent='Login gagal: '+explainAuthError(e);}finally{btn.disabled=false;}
 });
 if(firebaseAuth){
  firebaseAuth.getRedirectResult().then(result=>{
-  if(result&&result.user)updateAdminStatus(result.user);
+  if(result&&result.user){updateAdminStatus(result.user);const cover=document.getElementById('cover');if(cover)cover.style.display='none';}
  }).catch(e=>{const status=document.getElementById('adminStatus');if(status)status.textContent='Login Google gagal: '+explainAuthError(e);});
 }
 if(firebaseAuth)firebaseAuth.onAuthStateChanged(user=>{
  updateAdminStatus(user);
  const b=document.getElementById('adminLogin');if(b)b.textContent=user?'Keluar dari akun Admin':'🔐 Registrasi / Masuk Admin dengan Google';
- // Setelah redirect Google, tunggu Firebase memulihkan sesi. Jika Admin sudah aktif,
- // tutup sampul otomatis agar aplikasi tidak tampak seperti logout.
  const cover=document.getElementById('cover');
- if(user && cover){ cover.style.display='none'; }
- // Beri status eksplisit di sampul bila pengguna belum login, dan pertahankan status
- // akun setelah reload/redirect agar tidak terlihat seperti sesi hilang.
  if(user){
+   if(cover)cover.style.display='none';
+   try{sessionStorage.removeItem('ut_resume_game_after_login');}catch(e){}
    const status=document.getElementById('adminStatus');
    if(status)status.textContent=`Login berhasil — Admin aktif: ${user.email||user.displayName||'akun Google'}.`;
  }
