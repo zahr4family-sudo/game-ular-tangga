@@ -642,7 +642,7 @@ function showPromptBuilder(){
 document.getElementById('showAIPrompt').addEventListener('click',showPromptBuilder);
 document.getElementById('buildAIPrompt').addEventListener('click',()=>{document.getElementById('aiPrompt').value=buildQuestionPrompt();document.getElementById('aiPrompt').style.display='block';document.getElementById('copyPrompt').style.display='inline-block';document.getElementById('copyPrompt').textContent='Salin Prompt';});
 document.getElementById('copyPrompt').addEventListener('click',async()=>{const prompt=document.getElementById('aiPrompt').value;try{await navigator.clipboard.writeText(prompt);document.getElementById('copyPrompt').textContent='Tersalin ✓'}catch(e){document.getElementById('aiPrompt').select();document.execCommand('copy');document.getElementById('copyPrompt').textContent='Salin Prompt';}});
-const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFkKC0RMe9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
+const firebaseConfig={apiKey:"AIzaSyCpRaJouhxKC2mKOXjgA_DJFkWK0CRm9EU",authDomain:"ulartangga-b7018.firebaseapp.com",databaseURL:"https://ulartangga-b7018-default-rtdb.firebaseio.com",projectId:"ulartangga-b7018",storageBucket:"ulartangga-b7018.firebasestorage.app",messagingSenderId:"1043014952343",appId:"1:1043014952343:web:bc3d3c19629cebd963d0d2",measurementId:"G-NST66FGY2R"};
 let firebaseApp=null, firebaseAuth=null, googleProvider=null;
 try {
  if(window.firebase && !firebase.apps.length) firebaseApp=firebase.initializeApp(firebaseConfig);
