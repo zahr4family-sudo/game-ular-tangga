@@ -26,13 +26,10 @@
   select, button{ width:100%; padding:10px; border-radius:8px; border:1px solid #cbdbe8; background:#f7fbff; cursor:pointer; font-size:15px; }
   .primary{ background:#2f6fb0; color:#fff; border:none; box-shadow:0 8px 18px rgba(47,111,176,.12); }
 
-  #dice-row{ display:flex; gap:6px; align-items:center; margin-top:8px; flex-wrap:wrap; }
-  #dice-row button{width:auto;min-width:0;padding:10px 8px;font-size:13px;flex:1 1 auto;}
-  #dice-row #dice{flex:1.5 1 110px;font-size:15px;}
-  #dice-row #musicBtn,#dice-row #muteSfxBtn{flex:1 1 58px;} 
-  #dice{ padding:12px 10px; font-size:15px; flex:1 1 120px; border-radius:10px; background:linear-gradient(180deg,#fff,#eaf2ff); border:1px solid #c8d8f0; box-shadow:0 6px 12px rgba(30,80,140,.05); cursor:pointer; }
+  #dice-row{ display:flex; gap:8px; align-items:center; margin-top:8px; }
+  #dice{ padding:12px 16px; font-size:16px; border-radius:10px; background:linear-gradient(180deg,#fff,#eaf2ff); border:1px solid #c8d8f0; box-shadow:0 6px 12px rgba(30,80,140,.05); cursor:pointer; }
   #dice:active{ transform: translateY(2px); }
-  #dice-visual{ width:52px; flex:0 0 52px; height:44px; display:flex; align-items:center; justify-content:center; background:#f1f7ff; border-radius:8px; font-size:20px; border:1px solid #e6eef7; }
+  #dice-visual{ width:88px; height:44px; display:flex; align-items:center; justify-content:center; background:#f1f7ff; border-radius:8px; font-size:20px; border:1px solid #e6eef7; }
 
   /* Dice overlay (cube) */
   .dice-overlay{ position:fixed; left:50%; top:45%; transform: translate(-50%,-50%) scale(0.95); width:140px; height:140px; perspective:900px; z-index:9998; display:none; pointer-events:none; }
@@ -167,14 +164,17 @@
           <button id="reset">🔄 Reset</button>
         </div>
 
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="musicBtn" title="Toggle music">🎵 Musik</button>
+          <button id="muteSfxBtn" title="Mute sfx">🔈 SFX</button>
+        </div>
+
         <div id="turn" style="font-weight:700; margin-top:6px;">Giliran: <b>-</b></div>
         <div id="message" style="color:#234c66; min-height:44px; font-size:14px;">Atur nama lalu klik Mulai.</div>
 
         <div id="dice-row">
           <button id="dice" disabled>🎲 Lempar Dadu</button>
           <div id="dice-visual">—</div>
-          <button id="musicBtn" title="Toggle music">🎵 Musik</button>
-          <button id="muteSfxBtn" title="Mute sfx">🔈 SFX</button>
         </div>
 
         <div class="scores" id="scores">
@@ -196,12 +196,12 @@
             <b>🌐 Multiplayer Online</b>
             <button id="adminLogin" type="button" class="primary">🔐 Registrasi / Masuk Admin dengan Google</button>
             <small id="adminStatus" aria-live="polite">Admin harus masuk menggunakan akun Google/Gmail sebelum membuat tautan soal. Pemain yang bergabung dapat memakai autentikasi anonim jika diaktifkan di Firebase.</small>
-            <small>Admin membuat link permainan. Pion 1 yang pertama membuka link membuat kode regu. Maksimal 4 pion per regu; permainan dapat dimulai setelah minimal 2 pion bergabung.</small>
-            <label for="roomName">Nama regu / nama pion 1</label><input id="roomName" type="text" maxlength="24" placeholder="Contoh: Regu Al-Fatihah">
-            <label for="teamMembers">Anggota regu (opsional)</label><input id="teamMembers" type="text" maxlength="160" placeholder="Ahmad, Fatimah, Ali, Aisyah">
+            <small>Buat ruang permainan, lalu bagikan kode/link kepada teman. Maksimal 10 regu per ruang; setiap regu maksimal 4 anggota/pemain.</small>
+            <label for="roomName">Nama regu (maksimal 10 regu per ruang)</label><input id="roomName" type="text" maxlength="24" placeholder="Contoh: Regu Al-Fatihah">
+            <label for="teamMembers">Anggota regu (maksimal 4 orang, pisahkan dengan koma)</label><input id="teamMembers" type="text" maxlength="160" placeholder="Ahmad, Fatimah, Ali, Aisyah">
             <div class="online-actions"><button id="createRoom" type="button" class="primary">＋ Buat Ruang</button><button id="joinRoom" type="button">Gabung Ruang</button></div>
             <label for="roomCode">Kode ruang</label><input id="roomCode" type="text" maxlength="8" placeholder="Contoh: A1B2C3" autocapitalize="characters">
-            <button id="shareGame" type="button">🔗 Buat Link Permainan</button>
+            <button id="shareGame" type="button">🔗 Buat Link Soal</button>
             <small id="roomStatus" aria-live="polite">Mode offline siap. Online membutuhkan login Google dan Firebase Rules yang aman.</small>
           </div>
           <small id="shareStatus"></small>
@@ -594,14 +594,14 @@ function endGame(){
 /* ---------- Start / UI ---------- */
 document.getElementById('btnStart').addEventListener('click', async ()=>{
   if(onlineRoomId){
-    if(onlineSeat!==0||!onlineHost){roomStatus('Hanya Pion 1/pembuat kode regu yang dapat memulai permainan.');return;}
+    if(onlineSeat!==0||!onlineHost){roomStatus('Hanya pion pertama/pembuat link yang dapat memulai permainan.');return;}
     try{
       const room=await dbRequest('rooms/'+onlineRoomId);if(!room)throw Error('Ruang tidak ditemukan.');
-      const limit=4;const seats=Array.isArray(room.players)?room.players:[];const joined=seats.slice(0,4).filter(Boolean).length;
-      if(joined<2)throw Error(`Minimal 2 pion harus bergabung untuk memulai (${joined}/2).`);
-      activePlayerCount=joined;finishOrder=[];turnIdx=0;gameOver=false;resetQuizShuffle();
-      for(let i=0;i<4;i++){players[i].name=seats[i]?.name||`Menunggu pemain ${i+1}`;players[i].isAI=!seats[i];players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;}
-      const state={players:players.slice(0,4).map(p=>({id:p.id,pos:1,pahala:0,dosa:0,name:p.name,isAI:p.isAI,finished:false,finishRank:0,sixChain:0})),turnIdx:0,activePlayerCount:joined,gameOver:false,finishOrder:[],started:true,updatedAt:Date.now()};
+      const limit=Math.max(3,Math.min(4,Number(room.playerLimit)||4));const seats=Array.isArray(room.players)?room.players:[];const joined=seats.slice(0,limit).filter(Boolean).length;
+      if(joined<limit)throw Error(`Tunggu semua pion bergabung terlebih dahulu (${joined}/${limit}).`);
+      activePlayerCount=limit;finishOrder=[];turnIdx=0;gameOver=false;resetQuizShuffle();
+      for(let i=0;i<limit;i++){players[i].name=seats[i].name;players[i].isAI=false;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;}
+      const state={players:players.slice(0,limit).map(p=>({id:p.id,pos:1,pahala:0,dosa:0,name:p.name,isAI:false,finished:false,finishRank:0,sixChain:0})),turnIdx:0,activePlayerCount:limit,gameOver:false,finishOrder:[],started:true,updatedAt:Date.now()};
       await dbRequest('rooms/'+onlineRoomId+'/state','PUT',state);await dbRequest('rooms/'+onlineRoomId+'/status','PUT','playing');window._lastRoomStateAt=0;updateAllPlayers();updateScores();diceBtn.disabled=false;document.getElementById('leaderboard').style.display='none';updateTurnUI();roomStatus('Permainan dimulai. Semua perangkat akan mengikuti giliran yang sama.');startRoomPolling();return;
     }catch(e){roomStatus('Belum dapat memulai: '+e.message);return;}
   }
@@ -767,18 +767,24 @@ document.getElementById('exportScores')?.addEventListener('click',()=>{
  const csv='\ufeff'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='peringkat-ular-tangga-kkg-pai.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 });
 document.getElementById('shareGame').addEventListener('click',async()=>{
- const status=document.getElementById('shareStatus');status.textContent='Membuat link permainan untuk dibagikan...';
+ const status=document.getElementById('shareStatus');status.textContent='Membuat tautan multiplayer...';
  try{
   await getIdToken();
-  const gameId=makeRoomCode();
-  const payload={title:'Ular Tangga Islami KKG PAI',ownerUid:currentUser().uid,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,createdAt:Date.now(),maxPlayers:4};
-  await dbRequest('sharedGames/'+gameId,'PUT',payload);
-  const url=new URL(location.href);url.hash='game='+gameId;history.replaceState(null,'',url.href);
-  window.sharedGameTemplate=payload;
-  const copied=await copyTextReliable(url.href);
-  status.textContent='Link permainan berhasil dibuat: '+url.href+' '+(copied?'(sudah disalin).':'(silakan salin link).');
-  roomStatus('Admin telah membuat link permainan. Bagikan link ini. Pion 1 yang pertama membuka link membuat kode regu, lalu membagikan kode regu kepada pemain lain.');
- }catch(err){status.textContent='Gagal membuat link permainan: '+err.message;}
+  const count=Math.max(3,Math.min(4,Number(document.getElementById('totalPlayers').value)||4));
+  const name=document.getElementById('name1').value.trim()||document.getElementById('roomName').value.trim()||'Pion 1';
+  const code=makeRoomCode();onlineRoomId=code;onlineSeat=0;onlineHost=true;
+  const seats=Array(count).fill(null);seats[0]={id:clientId,name,members:[name],joinedAt:Date.now()};
+  const statePlayers=Array.from({length:count},(_,i)=>({id:'p'+(i+1),pos:1,pahala:0,dosa:0,name:i===0?name:'Menunggu pemain '+(i+1),isAI:false,finished:false,finishRank:0,sixChain:0}));
+  const payload={title:'Ular Tangga Islami KKG PAI',host:clientId,hostUid:currentUser().uid,playerLimit:count,players:seats,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,status:'waiting',createdAt:Date.now(),state:{players:statePlayers,turnIdx:0,activePlayerCount:count,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
+  await dbRequest('rooms/'+code,'PUT',payload);
+  document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;document.getElementById('totalPlayers').value=String(count);
+  const url=new URL(location.href);url.hash='room='+code;history.replaceState(null,'',url.href);
+  customQuestions=payload.questions;resetQuizShuffle();activePlayerCount=count;turnIdx=0;gameOver=false;finishOrder=[];
+  for(let i=0;i<count;i++){players[i].name=statePlayers[i].name;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;players[i].isAI=false;}
+  injectPawns();updateAllPlayers();updateScores();diceBtn.disabled=true;startRoomPolling();lockRoomInterface(true);
+  const copied=await copyTextReliable(url.href);status.textContent='Link multiplayer dibuat: '+url.href+' '+(copied?'(sudah disalin).':'(salin link secara manual).');
+  roomStatus(`Ruang ${code} dibuat untuk ${count} pion. Bagikan link, tunggu semua pion bergabung, lalu tekan “Mulai Game”.`);
+ }catch(err){status.textContent='Gagal membuat link multiplayer: '+err.message;}
 });
 
 /* ---------- Multiplayer rooms (Firebase Realtime Database REST) ----------
@@ -794,130 +800,69 @@ function snapshotGame(){return {players:players.slice(0,activePlayerCount).map(p
 async function writeRoomState(){if(!onlineRoomId||onlineSeat<0||onlineApplying)return;await dbRequest('rooms/'+onlineRoomId+'/state','PUT',snapshotGame());}
 function applyRoomState(st){if(!st||!Array.isArray(st.players)||onlineApplying)return;onlineApplying=true;try{activePlayerCount=Math.min(4,Math.max(2,Number(st.activePlayerCount)||st.players.length));st.players.forEach((d,i)=>{if(!players[i])return;players[i].pos=Math.min(100,Math.max(1,Number(d.pos)||1));players[i].pahala=Number(d.pahala)||0;players[i].dosa=Number(d.dosa)||0;players[i].name=d.name||`Pemain ${i+1}`;players[i].isAI=false;players[i].finished=!!d.finished;players[i].finishRank=Number(d.finishRank)||0;players[i].sixChain=Number(d.sixChain)||0;});for(let i=activePlayerCount;i<4;i++){players[i].name='-';players[i].pos=1;players[i].isAI=true;players[i].finished=false;}finishOrder=Array.isArray(st.finishOrder)?st.finishOrder:players.slice(0,activePlayerCount).filter(p=>p.finished).sort((a,b)=>a.finishRank-b.finishRank).map(p=>p.id);turnIdx=Math.min(activePlayerCount-1,Math.max(0,Number(st.turnIdx)||0));gameOver=!!st.gameOver;window._onlineGameStarted=!!st.started;document.getElementById('totalPlayers').value=String(activePlayerCount);injectPawns();updateAllPlayers();updateScores();updateTurnUI();diceBtn.disabled=gameOver||turnIdx!==onlineSeat||!!players[turnIdx]?.finished;document.getElementById('message').textContent=gameOver?'Partai selesai.':(turnIdx===onlineSeat?'Giliran Anda — lempar dadu!':`Menunggu ${players[turnIdx]?.name||'pemain lain'}...`);if(finishOrder.length)showLeaderboard();}finally{onlineApplying=false;}}
 function lockRoomInterface(isHost){
- const hasRoom=!!onlineRoomId;
- const hasGame=!!location.hash.match(/game=([A-Z0-9]{6})/i)&&!hasRoom;
- const guest=hasRoom&&!isHost;
- ['teamMembers','adminLogin','adminStatus','quizFile','downloadTemplate','showAIPrompt','aiPromptSettings','aiPrompt','copyPrompt','quizSeconds','shareGame'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
- const settings=document.querySelector('.settings');if(settings)settings.querySelectorAll('label,input,button,textarea').forEach(el=>{if(['roomName','roomCode','joinRoom','createRoom','roomStatus','shareStatus'].includes(el.id))return;if(['quizSeconds','quizFile','downloadTemplate','showAIPrompt','aiPromptSettings','aiPrompt','copyPrompt','shareGame'].includes(el.id))el.style.display='none';});
+ const guest=!isHost&&(!!onlineRoomId||!!location.hash.match(/room=([A-Z0-9]{6})/i));
+ ['teamMembers','createRoom','shareGame','adminLogin','adminStatus','quizFile','downloadTemplate','showAIPrompt','aiPromptSettings','aiPrompt','copyPrompt','quizSeconds'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+ const settings=document.querySelector('.settings');if(settings)settings.querySelectorAll('label,input,button,textarea').forEach(el=>{if(['roomName','roomCode','joinRoom','roomStatus','shareStatus'].includes(el.id))return;if(el.id==='quizSeconds'||el.id==='quizFile'||el.id==='downloadTemplate'||el.id==='showAIPrompt'||el.id==='aiPromptSettings'||el.id==='aiPrompt'||el.id==='copyPrompt')el.style.display='none';});
  ['name1','name2','name3','name4'].forEach(id=>{const el=document.getElementById(id);if(el){el.disabled=true;el.style.display='none';}});
  const mainNameLabel=document.querySelector('.ui-panel > label');if(mainNameLabel)mainNameLabel.style.display='none';
  const countLabel=Array.from(document.querySelectorAll('.ui-panel label')).find(el=>el.textContent.includes('Jumlah pemain aktif'));if(countLabel)countLabel.style.display='none';
  const total=document.getElementById('totalPlayers');if(total){total.disabled=true;total.style.display='none';}
- const roomName=document.getElementById('roomName');if(roomName){roomName.disabled=false;roomName.style.display='';const lab=document.querySelector('label[for="roomName"]');if(lab)lab.textContent=hasGame?'Nama pion 1 / nama regu':'Nama pion Anda';roomName.placeholder=hasGame?'Contoh: Regu Al-Fatihah':'Masukkan nama pion Anda';}
- const code=document.getElementById('roomCode');if(code){code.readOnly=hasGame;code.style.display=hasGame?'none':'';}
- const join=document.getElementById('joinRoom');if(join)join.style.display=hasRoom&&!isHost?'':'none';
- const create=document.getElementById('createRoom');if(create){create.style.display=hasGame?'':'none';create.textContent=hasGame?'＋ Buat Kode Regu (Pion 1)':'＋ Buat Ruang';}
- const start=document.getElementById('btnStart');if(start){start.style.display=hasRoom&&!guest?'':'none';start.disabled=guest;}
+ const roomName=document.getElementById('roomName');if(roomName){roomName.disabled=false;roomName.style.display='';const lab=document.querySelector('label[for="roomName"]');if(lab)lab.textContent='Nama pion Anda';}
+ const code=document.getElementById('roomCode');if(code){code.readOnly=true;code.style.display='';}
+ const join=document.getElementById('joinRoom');if(join)join.style.display=guest?'':'none';
+ const create=document.getElementById('createRoom');if(create)create.style.display='none';
+ const start=document.getElementById('btnStart');if(start){start.style.display=onlineRoomId&&!guest?'':'none';start.disabled=guest;}
  const reset=document.getElementById('reset');if(reset)reset.style.display='none';
- const qCount=document.getElementById('questionCount');if(qCount)qCount.textContent=hasRoom?'Soal dan pengaturan dikunci oleh Admin.':(hasGame?'Link permainan siap. Pion 1 membuat kode regu; pemain lain bergabung menggunakan kode regu.':'');
+ const qCount=document.getElementById('questionCount');if(qCount)qCount.textContent='Soal, jumlah pion, dan pengaturan dikunci oleh pembuat link.';
 }
 async function pollRoom(){
  if(!onlineRoomId)return;
  try{
-  const data=await dbRequest('rooms/'+onlineRoomId);if(!data){roomStatus('Regu tidak ditemukan. Periksa kode regu.');return;}
-  const limit=4;activePlayerCount=(data.state&&data.state.started)?Math.max(2,Number(data.state.activePlayerCount)||data.players?.filter(Boolean).length||2):(Array.isArray(data.players)?data.players.filter(Boolean).length:0);
-  if(data.questions&&Array.isArray(data.questions)){customQuestions=data.questions;document.getElementById('questionCount').textContent='Soal regu: '+customQuestions.length+' soal. Pengaturan dikunci oleh Admin.';}
+  const data=await dbRequest('rooms/'+onlineRoomId);if(!data){roomStatus('Ruang tidak ditemukan. Periksa link.');return;}
+  const limit=Math.max(2,Math.min(4,Number(data.playerLimit)||Number(data.state?.activePlayerCount)||2));activePlayerCount=limit;
+  if(data.questions&&Array.isArray(data.questions)){customQuestions=data.questions;document.getElementById('questionCount').textContent='Soal ruang online: '+customQuestions.length+' soal.';}
+  if(data.quizSeconds)document.getElementById('quizSeconds').value=data.quizSeconds;
   const seats=Array.isArray(data.players)?data.players:[];
   seats.forEach((rp,i)=>{if(players[i]){players[i].name=rp&&rp.name?rp.name:'Menunggu pemain '+(i+1);players[i].isAI=false;}});
   if(data.state&&Number(data.state.updatedAt||0)>Number(window._lastRoomStateAt||0)){window._lastRoomStateAt=data.state.updatedAt;applyRoomState(data.state);}
-  // Ask each current player to approve late join requests once; all existing players must approve.
-  const requests=data.joinRequests||{};
-  for(const [requestId,req] of Object.entries(requests)){
-   if(!req||req.status==='approved'||req.status==='rejected'||req.handledBy&&req.handledBy[clientId])continue;
-   const currentSeats=seats.slice(0,4).filter(Boolean);
-   if(!currentSeats.some(x=>x.id===clientId))continue;
-   if(!window._joinApprovalPrompted)window._joinApprovalPrompted={};
-   if(window._joinApprovalPrompted[requestId])continue;
-   window._joinApprovalPrompted[requestId]=true;
-   const yes=confirm(`Pemain baru “${req.name||'Pemain'}” meminta izin bergabung ke regu ${onlineRoomId}. Izinkan? Semua pion yang sudah bergabung harus menyetujui.`);
-   const approvalPath='rooms/'+onlineRoomId+'/joinRequests/'+requestId+'/approvals/'+encodeURIComponent(clientId);
-   await dbRequest(approvalPath,'PUT',yes);
-   const latest=await dbRequest('rooms/'+onlineRoomId);
-   const latestReq=latest?.joinRequests?.[requestId];
-   const active=Array.isArray(latest?.players)?latest.players.filter(Boolean):[];
-   const approvals=latestReq?.approvals||{};
-   const allApproved=active.length>0&&active.every(seat=>approvals[encodeURIComponent(seat.id)]===true||approvals[seat.id]===true);
-   if(allApproved)await dbRequest('rooms/'+onlineRoomId+'/joinRequests/'+requestId+'/status','PUT','approved');
-   else if(!yes)await dbRequest('rooms/'+onlineRoomId+'/joinRequests/'+requestId+'/status','PUT','rejected');
-  }
-  updateScores();const joined=seats.slice(0,4).filter(Boolean).length;const started=!!(data.state&&data.state.started);
-  const names=Array.from({length:4},(_,i)=>seats[i]?.name||`Kursi ${i+1} (kosong)`);
-  const startBtn=document.getElementById('btnStart');if(startBtn){startBtn.disabled=onlineSeat!==0||started||joined<2;startBtn.textContent=started?'Game Sedang Berlangsung':(joined<2?`Menunggu minimal 2 pion (${joined}/2)`:`▶ Mulai Game (${joined}/4 pion)`);}
-  roomStatus(`Kode regu ${onlineRoomId} • ${joined}/4 pion • ${started?'permainan berlangsung':'siap dimulai jika ada minimal 2 pion'} • ${names.join(' | ')}`);
- }catch(e){roomStatus('Tidak dapat menyinkronkan regu: '+e.message+' Periksa koneksi dan Firebase Realtime Database Rules.');}
+  updateScores();const joined=seats.slice(0,limit).filter(Boolean).length;const started=!!(data.state&&data.state.started);
+  const names=Array.from({length:limit},(_,i)=>seats[i]?.name||`Kursi ${i+1} (kosong)`);
+  const startBtn=document.getElementById('btnStart');if(startBtn){startBtn.disabled=onlineSeat!==0||started||joined<limit;startBtn.textContent=started?'Game Sedang Berlangsung':(joined<limit?`Menunggu pemain (${joined}/${limit})`:'▶ Mulai Game');}
+  roomStatus(`Ruang ${onlineRoomId} • ${joined}/${limit} pion bergabung • ${started?'permainan berlangsung':'menunggu dimulai'} • ${names.join(' | ')}`);
+ }catch(e){roomStatus('Tidak dapat menyinkronkan ruang: '+e.message+' Periksa koneksi dan Firebase Realtime Database Rules.');}
 }
 function startRoomPolling(){if(onlinePolling)clearInterval(onlinePolling);pollRoom();onlinePolling=setInterval(pollRoom,1800);}
 async function createOnlineRoom(){
- if(!currentUser()){
-  if(!firebaseAuth)throw Error('Firebase belum siap.');
-  try{await firebaseAuth.signInAnonymously();}catch(e){throw Error('Aktifkan Firebase Authentication → Sign-in method → Anonymous agar pion 1 dapat membuat kode regu. '+e.message);}
- }
- const name=document.getElementById('roomName').value.trim();if(!name)throw Error('Masukkan nama regu atau nama pion 1.');
- const templateId=(location.hash.match(/game=([A-Z0-9]{6})/i)||[])[1];
- let template=window.sharedGameTemplate||null;
- if(templateId){template=await dbRequest('sharedGames/'+templateId);if(!template)throw Error('Link permainan Admin tidak ditemukan.');}
- const code=makeRoomCode();onlineRoomId=code;onlineSeat=0;onlineHost=true;
- const seats=[{id:clientId,name,members:[name],joinedAt:Date.now()},null,null,null];
- const qs=template&&Array.isArray(template.questions)?template.questions:activeQuestions();
- const seconds=Number(template?.quizSeconds)||Number(document.getElementById('quizSeconds').value)||15;
- const statePlayers=Array.from({length:4},(_,i)=>({id:'p'+(i+1),pos:1,pahala:0,dosa:0,name:i===0?name:'Menunggu pemain '+(i+1),isAI:false,finished:false,finishRank:0,sixChain:0}));
- const room={title:'Ular Tangga Islami KKG PAI',host:clientId,hostUid:currentUser().uid,gameTemplateId:templateId||'',playerLimit:4,players:seats,questions:qs,quizSeconds:seconds,status:'waiting',createdAt:Date.now(),joinRequests:{},state:{players:statePlayers,turnIdx:0,activePlayerCount:1,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
- await dbRequest('rooms/'+code,'PUT',room);document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;
- const url=new URL(location.href);url.hash='room='+code;history.replaceState(null,'',url.href);
- customQuestions=qs;activePlayerCount=1;for(let i=0;i<4;i++){players[i].name=statePlayers[i].name;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;players[i].isAI=i>0;}
- injectPawns();updateAllPlayers();updateScores();diceBtn.disabled=true;startRoomPolling();lockRoomInterface(true);
- const teamUrl=url.href;const copied=await copyTextReliable(teamUrl);roomStatus(`Kode regu ${code} berhasil dibuat oleh Pion 1. ${copied?'Link/kode regu disalin.':'Bagikan kode regu '+code+' kepada pemain lain.'} Minimal 2 pion untuk memulai; maksimal 4 pion.`);
+ await getIdToken();const count=Math.max(3,Math.min(4,Number(document.getElementById('totalPlayers').value)||4));
+ const name=document.getElementById('name1').value.trim()||document.getElementById('roomName').value.trim();if(!name)throw Error('Isi nama pion pertama.');
+ const code=makeRoomCode();onlineRoomId=code;onlineSeat=0;onlineHost=true;const seats=Array(count).fill(null);seats[0]={id:clientId,name,members:[name],joinedAt:Date.now()};
+ const statePlayers=Array.from({length:count},(_,i)=>({id:'p'+(i+1),pos:1,pahala:0,dosa:0,name:i===0?name:'Menunggu pemain '+(i+1),isAI:false,finished:false,finishRank:0,sixChain:0}));
+ const room={title:'Ular Tangga Islami KKG PAI',host:clientId,hostUid:currentUser().uid,playerLimit:count,players:seats,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,status:'waiting',createdAt:Date.now(),state:{players:statePlayers,turnIdx:0,activePlayerCount:count,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
+ await dbRequest('rooms/'+code,'PUT',room);document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;const url=new URL(location.href);url.hash='room='+code;history.replaceState(null,'',url.href);
+ activePlayerCount=count;for(let i=0;i<count;i++){players[i].name=statePlayers[i].name;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;players[i].isAI=false;}injectPawns();updateAllPlayers();updateScores();diceBtn.disabled=true;startRoomPolling();lockRoomInterface(true);const copied=await copyTextReliable(url.href);roomStatus(`Ruang ${code} dibuat untuk ${count} pion. ${copied?'Link disalin.':'Salin link dari bilah alamat.'} Tunggu semua pion bergabung, lalu tekan Mulai Game.`);
 }
 async function joinOnlineRoom(){
- if(!currentUser()){
-  if(!firebaseAuth)throw Error('Firebase belum siap.');
-  try{await firebaseAuth.signInAnonymously();}catch(e){throw Error('Aktifkan Firebase Authentication → Sign-in method → Anonymous. '+e.message);}
- }
+ if(!currentUser()){if(!firebaseAuth)throw Error('Firebase belum siap.');try{await firebaseAuth.signInAnonymously();}catch(e){throw Error('Aktifkan Firebase Authentication → Sign-in method → Anonymous. '+e.message);}}
  const name=document.getElementById('roomName').value.trim();const code=(document.getElementById('roomCode').value.trim()||((location.hash.match(/room=([A-Z0-9]{6})/i)||[])[1]||'')).toUpperCase();
- if(!name)throw Error('Masukkan nama pion Anda.');if(!/^[A-Z0-9]{6}$/.test(code))throw Error('Kode regu tidak valid.');
- const room=await dbRequest('rooms/'+code);if(!room)throw Error('Regu tidak ditemukan.');
- const seats=Array.isArray(room.players)?room.players:[null,null,null,null];while(seats.length<4)seats.push(null);
- let seat=seats.findIndex(x=>x&&x.id===clientId);
- if(seat<0){
-  const occupied=seats.filter(Boolean);
-  if(occupied.length===0){seat=0;}
-  else{
-   if(occupied.length>=4)throw Error('Regu sudah penuh (4 pion).');
-   const requestId=clientId.replace(/[^A-Za-z0-9_-]/g,'_');
-   let req=room.joinRequests&&room.joinRequests[requestId];
-   if(!req){req={id:requestId,clientId,name,status:'pending',requestedAt:Date.now(),approvals:{}};await dbRequest('rooms/'+code+'/joinRequests/'+requestId,'PUT',req);throw Error('Permintaan bergabung sudah dikirim. Tunggu persetujuan dari semua pion yang sudah berada di regu, lalu tekan Gabung Ruang kembali.');}
-   if(req.status==='rejected'){throw Error('Permintaan bergabung ditolak oleh salah satu pion sebelumnya.');}
-   if(req.status!=='approved')throw Error('Permintaan masih menunggu persetujuan semua pion sebelumnya.');
-   seat=seats.findIndex(x=>!x);if(seat<0)throw Error('Regu sudah penuh.');
-   seats[seat]={id:clientId,name,members:[name],joinedAt:Date.now()};await dbRequest('rooms/'+code+'/players','PUT',seats);
-   await dbRequest('rooms/'+code+'/joinRequests/'+requestId+'/status','PUT','joined');
-  }
- }
- if(!seats[seat]){seats[seat]={id:clientId,name,members:[name],joinedAt:Date.now()};await dbRequest('rooms/'+code+'/players','PUT',seats);}
- else if(seats[seat].id===clientId&&seats[seat].name!==name){seats[seat].name=name;await dbRequest('rooms/'+code+'/players','PUT',seats);}
- const old=room.state||{},oldPlayers=Array.isArray(old.players)?old.players:[];
- const statePlayers=Array.from({length:4},(_,i)=>({...((oldPlayers[i])||{id:'p'+(i+1),pos:1,pahala:0,dosa:0,finished:false,finishRank:0,sixChain:0}),name:seats[i]?.name||'Menunggu pemain '+(i+1),isAI:!seats[i]}));
- const joinedCount=seats.filter(Boolean).length;await dbRequest('rooms/'+code+'/state','PUT',{...old,players:statePlayers,activePlayerCount:joinedCount,turnIdx:Number(old.turnIdx)||0,gameOver:!!old.gameOver,finishOrder:Array.isArray(old.finishOrder)?old.finishOrder:[],started:!!old.started,updatedAt:Date.now()});
- onlineRoomId=code;onlineSeat=seat;onlineHost=seat===0&&room.host===clientId;document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;document.getElementById('totalPlayers').value='4';if(room.questions)customQuestions=room.questions;if(room.quizSeconds)document.getElementById('quizSeconds').value=room.quizSeconds;
- lockRoomInterface(onlineHost);startRoomPolling();roomStatus(`Bergabung ke kode regu ${code} sebagai Pion ${seat+1}.`);
+ if(!name)throw Error('Masukkan nama pion Anda.');if(!/^[A-Z0-9]{6}$/.test(code))throw Error('Link/kode ruang tidak valid.');
+ const room=await dbRequest('rooms/'+code);if(!room)throw Error('Ruang tidak ditemukan.');const limit=Math.max(2,Math.min(4,Number(room.playerLimit)||Number(room.state?.activePlayerCount)||2));
+ let seats=Array.isArray(room.players)?room.players:[];while(seats.length<limit)seats.push(null);
+ let seat=seats.findIndex(x=>x&&x.id===clientId);if(seat<0)seat=seats.findIndex(x=>!x);
+ if(seat<0||seat>=limit)throw Error('Semua pion sudah terisi.');if(room.state&&room.state.started&&!seats[seat])throw Error('Permainan sudah dimulai. Pion baru tidak dapat bergabung.');
+ seats[seat]={id:clientId,name,members:[name],joinedAt:Date.now()};await dbRequest('rooms/'+code+'/players','PUT',seats);
+ const old=room.state||{},oldPlayers=Array.isArray(old.players)?old.players:[];const statePlayers=Array.from({length:limit},(_,i)=>({...((oldPlayers[i])||{id:'p'+(i+1),pos:1,pahala:0,dosa:0,finished:false,finishRank:0,sixChain:0}),name:seats[i]?.name||'Menunggu pemain '+(i+1),isAI:false}));
+ await dbRequest('rooms/'+code+'/state','PUT',{...old,players:statePlayers,activePlayerCount:limit,turnIdx:Number(old.turnIdx)||0,gameOver:!!old.gameOver,finishOrder:Array.isArray(old.finishOrder)?old.finishOrder:[],started:!!old.started,updatedAt:Date.now()});
+ onlineRoomId=code;onlineSeat=seat;onlineHost=seat===0&&room.host===clientId;document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;document.getElementById('totalPlayers').value=String(limit);if(room.questions)customQuestions=room.questions;if(room.quizSeconds)document.getElementById('quizSeconds').value=room.quizSeconds;
+ lockRoomInterface(false);startRoomPolling();roomStatus(`Bergabung ke ruang ${code} sebagai Pion ${seat+1}.`);
 }
 document.getElementById('createRoom').addEventListener('click',async()=>{try{await createOnlineRoom()}catch(e){roomStatus('Gagal membuat ruang: '+e.message+'. Jika HTTP 401/403, Firebase Rules menolak akses.');}});
 document.getElementById('joinRoom').addEventListener('click',async()=>{try{await joinOnlineRoom()}catch(e){roomStatus('Gagal bergabung: '+e.message+'. Periksa koneksi, kode ruang, dan Firebase Rules.');}});
-if(location.hash.match(/room=([A-Z0-9]{6})/i)){const code=location.hash.match(/room=([A-Z0-9]{6})/i)[1].toUpperCase();document.getElementById('roomCode').value=code;lockRoomInterface(false);document.getElementById('roomName').focus();roomStatus('Kode regu terdeteksi. Masukkan nama pion Anda, lalu klik Gabung Ruang.');}
-if(location.hash.match(/game=([A-Z0-9]{6})/i)){lockRoomInterface(false);document.getElementById('roomName').focus();}
+if(location.hash.match(/room=([A-Z0-9]{6})/i)){const code=location.hash.match(/room=([A-Z0-9]{6})/i)[1].toUpperCase();document.getElementById('roomCode').value=code;lockRoomInterface(false);document.getElementById('roomName').focus();roomStatus('Tautan ruang terdeteksi. Masukkan nama pion Anda, lalu klik Gabung Ruang.');}
 
 async function loadSharedGame(){
  const match=location.hash.match(/game=([^&]+)/);if(!match)return;
- try{
-  const gameId=decodeURIComponent(match[1]);const data=await dbRequest('sharedGames/'+gameId);
-  if(data&&Array.isArray(data.questions)){
-   window.sharedGameTemplate=data;customQuestions=data.questions;resetQuizShuffle();if(data.quizSeconds)document.getElementById('quizSeconds').value=data.quizSeconds;
-   document.getElementById('questionCount').textContent='Link permainan dari Admin siap: '+customQuestions.length+' soal. Pion 1 membuat kode regu.';
-   const create=document.getElementById('createRoom');if(create){create.style.display='';create.textContent='＋ Buat Kode Regu (Pion 1)';}
-   const join=document.getElementById('joinRoom');if(join)join.style.display='none';
-   lockRoomInterface(false);roomStatus('Link resmi dari Admin terbuka. Pion 1 isi nama regu lalu klik Buat Kode Regu. Setelah kode dibuat, bagikan kode regu kepada pion lain.');
-  }
- }catch(e){console.warn('Konfigurasi game online tidak dapat dimuat.',e);roomStatus('Link permainan tidak dapat dimuat: '+e.message);}
+ try{let sharedUrl=firebaseConfig.databaseURL+'/sharedGames/'+encodeURIComponent(match[1])+'.json';if(currentUser())sharedUrl+='?auth='+encodeURIComponent(await currentUser().getIdToken());const r=await fetch(sharedUrl);if(!r.ok)return;const data=await r.json();if(data&&Array.isArray(data.questions)){customQuestions=data.questions;resetQuizShuffle();if(data.quizSeconds)document.getElementById('quizSeconds').value=data.quizSeconds;document.getElementById('questionCount').textContent='Soal dari link online: '+customQuestions.length+' soal.';}}
+ catch(e){console.warn('Konfigurasi game online tidak dapat dimuat.',e)}
 }
 loadSharedGame();
 
