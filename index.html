@@ -101,6 +101,17 @@
   .quiz-option.correct{background:#e2f8e8;border-color:#26964e}.quiz-option.wrong{background:#ffe9e7;border-color:#ce5145}
   .quiz-card input{width:100%;padding:12px;border:1px solid #ccd9d0;border-radius:10px;box-sizing:border-box}
   @media(max-width:760px){.game-wrap{flex-direction:column;align-items:center}.board-area{width:min(95vw,650px)}.ui-panel{width:min(95vw,650px);box-sizing:border-box}}
+  /* Admin dashboard and mobile dice placement */
+  .admin-dashboard{display:none;margin-top:12px;padding:14px;border:1px solid #cfe3d3;border-radius:16px;background:#f8fcf8;color:#163b29}
+  .admin-dashboard h3{margin:0 0 8px}.admin-game-card{background:white;border:1px solid #dce9df;border-radius:12px;padding:11px;margin:8px 0;overflow-wrap:anywhere}
+  .admin-game-card button{margin-top:6px}.admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.csv-editor{width:100%;min-height:170px;padding:10px;border:1px solid #cad8ce;border-radius:10px;font:12px/1.45 monospace;box-sizing:border-box}
+  .board-column{display:flex;flex-direction:column;gap:10px;flex:1 1 560px;min-width:0;width:min(100%,var(--max-board))}
+  .board-column .board-area{width:100%;flex:none}
+  .board-column #dice-row{display:flex;position:relative;z-index:8;width:100%;margin:0;padding:8px;background:#fff;border:1px solid #d9e7dd;border-radius:14px;box-shadow:0 6px 18px #123c2510}
+  .board-column #dice{flex:1;min-height:52px;font-weight:800;background:linear-gradient(135deg,#167a3f,#239754);color:#fff;font-size:17px}
+  .board-column #dice-visual{width:60px;height:48px;flex:none}
+  @media(max-width:980px){.board-column{width:min(96vw,650px);flex:none}.game-wrap{flex-direction:column;align-items:center}}
+  @media(max-width:600px){.board-column{width:96vw}.board-column #dice-row{position:sticky;bottom:6px}.admin-grid{grid-template-columns:1fr}}
   /* Responsive polish: fit small screens, safe areas and touch targets */
   *{box-sizing:border-box} body{overflow-x:hidden}.app{width:100%;padding:clamp(8px,2vw,20px)}
   .game-wrap{align-items:flex-start;gap:clamp(10px,2vw,20px)}.board-area{flex:1 1 560px;min-width:0;width:min(100%,var(--max-board))}
@@ -136,6 +147,7 @@
 
   <div class="app">
     <div class="game-wrap">
+      <div class="board-column">
       <div class="board-area">
         <div id="game-container">
           <div class="player" id="p1"><div class="shadow"></div></div>
@@ -143,6 +155,11 @@
           <div class="player" id="p3"><div class="shadow"></div></div>
           <div class="player" id="p4"><div class="shadow"></div></div>
         </div>
+      </div>
+      <div id="dice-row">
+        <button id="dice" disabled>🎲 Lempar Dadu</button>
+        <div id="dice-visual">—</div>
+      </div>
       </div>
 
       <div class="ui-panel">
@@ -172,11 +189,6 @@
         <div id="turn" style="font-weight:700; margin-top:6px;">Giliran: <b>-</b></div>
         <div id="message" style="color:#234c66; min-height:44px; font-size:14px;">Atur nama lalu klik Mulai.</div>
 
-        <div id="dice-row">
-          <button id="dice" disabled>🎲 Lempar Dadu</button>
-          <div id="dice-visual">—</div>
-        </div>
-
         <div class="scores" id="scores">
           <div class="score-card" id="s1"><div><b id="label1">Pemain 1</b></div><div><span id="score1">P:0 D:0</span></div></div>
           <div class="score-card" id="s2"><div><b id="label2">Pemain 2</b></div><div><span id="score2">P:0 D:0</span></div></div>
@@ -190,6 +202,7 @@
           <b>⚙️ Pengaturan Kuis & Soal</b>
           <label for="quizSeconds">Waktu menjawab (detik)</label><input id="quizSeconds" type="number" min="5" max="120" value="15">
           <label for="quizFile">Impor soal CSV (pemisah kolom: backslash \\)</label><input id="quizFile" type="file" accept=".csv,.txt">
+          <div id="csvEditPanel" style="display:none"><label for="csvEditor">Periksa dan edit isi CSV sebelum dipublikasikan</label><textarea id="csvEditor" class="csv-editor" spellcheck="false"></textarea><button id="applyCsvEdits" type="button">✓ Terapkan hasil edit CSV</button></div>
           <button id="downloadTemplate" type="button">⬇ Unduh Template CSV</button>
           <button id="showAIPrompt" type="button">✨ Prompt AI Pembuat Soal</button>
           <div class="online-controls">
@@ -205,6 +218,13 @@
             <small id="roomStatus" aria-live="polite">Mode offline siap. Online membutuhkan login Google dan Firebase Rules yang aman.</small>
           </div>
           <small id="shareStatus"></small>
+          <section id="adminDashboard" class="admin-dashboard">
+            <h3>📊 Panel Admin — Game & Aktivitas</h3>
+            <p style="font-size:12px;margin:4px 0 10px">Daftar tautan yang Anda publikasikan, room regu, skor pion, dan aktivitas terakhir.</p>
+            <div class="admin-grid"><button id="refreshAdminGames" type="button">↻ Muat ulang daftar</button><button id="exportAdminExcel" type="button" class="primary">⬇ Unduh laporan Excel</button></div>
+            <div id="adminGamesList" aria-live="polite">Masuk sebagai admin untuk memuat daftar game.</div>
+            <div id="adminActivityDetail"></div>
+          </section>
           <div id="aiPromptSettings" style="display:none;border:1px solid #d9e5dc;border-radius:10px;padding:10px;margin-top:8px;background:#f8fcf8">
             <label for="aiSubject">Mata pelajaran</label><input id="aiSubject" type="text" value="Pendidikan Agama Islam dan Budi Pekerti" placeholder="Contoh: IPAS, Matematika, PAI">
             <label for="aiGrade">Jenjang/kelas</label><input id="aiGrade" type="text" value="SD kelas 4" placeholder="Contoh: SD kelas 5 / SMP kelas 7">
@@ -598,11 +618,11 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
     try{
       const room=await dbRequest('rooms/'+onlineRoomId);if(!room)throw Error('Ruang tidak ditemukan.');
       const limit=Math.max(3,Math.min(4,Number(room.playerLimit)||4));const seats=Array.isArray(room.players)?room.players:[];const joined=seats.slice(0,limit).filter(Boolean).length;
-      if(joined<limit)throw Error(`Tunggu semua pion bergabung terlebih dahulu (${joined}/${limit}).`);
+      if(joined<2)throw Error(`Permainan dapat dimulai setelah minimal 2 pion bergabung (${joined}/2).`);
       activePlayerCount=limit;finishOrder=[];turnIdx=0;gameOver=false;resetQuizShuffle();
       for(let i=0;i<limit;i++){players[i].name=seats[i].name;players[i].isAI=false;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;}
       const state={players:players.slice(0,limit).map(p=>({id:p.id,pos:1,pahala:0,dosa:0,name:p.name,isAI:false,finished:false,finishRank:0,sixChain:0})),turnIdx:0,activePlayerCount:limit,gameOver:false,finishOrder:[],started:true,updatedAt:Date.now()};
-      await dbRequest('rooms/'+onlineRoomId+'/state','PUT',state);await dbRequest('rooms/'+onlineRoomId+'/status','PUT','playing');window._lastRoomStateAt=0;updateAllPlayers();updateScores();diceBtn.disabled=false;document.getElementById('leaderboard').style.display='none';updateTurnUI();roomStatus('Permainan dimulai. Semua perangkat akan mengikuti giliran yang sama.');startRoomPolling();return;
+      state.activePlayerCount=joined;state.players=state.players.slice(0,joined);await dbRequest('rooms/'+onlineRoomId+'/state','PUT',state);await dbRequest('rooms/'+onlineRoomId+'/status','PUT','playing');window._lastRoomStateAt=0;updateAllPlayers();updateScores();diceBtn.disabled=false;document.getElementById('leaderboard').style.display='none';updateTurnUI();roomStatus('Permainan dimulai. Semua perangkat akan mengikuti giliran yang sama.');startRoomPolling();return;
     }catch(e){roomStatus('Belum dapat memulai: '+e.message);return;}
   }
   resetQuizShuffle();
@@ -673,7 +693,7 @@ document.getElementById('downloadTemplate').addEventListener('click',()=>{
 });
 document.getElementById('quizFile').addEventListener('change',async e=>{
  const file=e.target.files[0];if(!file)return;
- try{const count=importQuestions(await file.text());document.getElementById('message').textContent=`Berhasil memuat ${count} soal kustom.`}
+ try{const raw=await file.text();const count=importQuestions(raw);document.getElementById('csvEditor').value=raw;document.getElementById('csvEditPanel').style.display='block';document.getElementById('message').textContent=`Berhasil memuat ${count} soal kustom. Periksa/edit CSV sebelum publikasi.`}
  catch(err){alert('Gagal membaca CSV: '+err.message)}
 });
 function buildQuestionPrompt(){
@@ -766,25 +786,58 @@ document.getElementById('exportScores')?.addEventListener('click',()=>{
  list.forEach(({p},i)=>rows.push([i+1,p.name||`Pemain ${i+1}`,p.pos||1,p.pahala||0,p.dosa||0,(p.pos>=100?'Juara':'Bermain')]));
  const csv='\ufeff'+rows.map(r=>r.map(csvCell).join(';')).join('\r\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='peringkat-ular-tangga-kkg-pai.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 });
+// Admin game registry: owned records are stored under the authenticated admin UID.
+let adminRegistryCache=[];
+function safeText(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function makePublishedCode(){return 'G'+Math.random().toString(36).slice(2,9).toUpperCase();}
+function adminRegistryPath(){const u=currentUser();if(!u)throw Error('Masuk sebagai admin terlebih dahulu.');return 'adminGames/'+u.uid;}
+async function refreshAdminGames(){
+ const list=document.getElementById('adminGamesList'),dash=document.getElementById('adminDashboard');
+ if(!currentUser()){dash.style.display='none';return;}
+ dash.style.display='block';list.textContent='Memuat data game...';
+ try{
+  const records=await dbRequest(adminRegistryPath());adminRegistryCache=records?Object.entries(records).map(([id,v])=>({...v,id})).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)):[];
+  if(!adminRegistryCache.length){list.innerHTML='<p>Belum ada tautan game yang dipublikasikan. Impor soal, edit bila perlu, lalu klik “Publikasikan Link Unik”.</p>';return;}
+  list.innerHTML=adminRegistryCache.map(g=>`<article class="admin-game-card"><b>${safeText(g.title||'Game Ular Tangga')}</b><div><small>Kode: ${safeText(g.id)} · ${new Date(g.createdAt||Date.now()).toLocaleString('id-ID')} · ${Number(g.questionCount)||0} soal</small></div><div><a href="${safeText(g.url||'#')}" target="_blank" rel="noopener">Buka tautan pemain</a></div><button type="button" data-detail-game="${safeText(g.id)}">Lihat aktivitas & skor regu</button> <button type="button" data-copy-game="${safeText(g.id)}">Salin link</button></article>`).join('');
+  list.querySelectorAll('[data-detail-game]').forEach(b=>b.onclick=()=>showAdminGameDetail(b.dataset.detailGame));
+  list.querySelectorAll('[data-copy-game]').forEach(b=>b.onclick=async()=>{const g=adminRegistryCache.find(x=>x.id===b.dataset.copyGame);if(g){const ok=await copyTextReliable(g.url);b.textContent=ok?'Link tersalin ✓':'Salin manual dari tautan';}});
+ }catch(e){list.textContent='Gagal memuat daftar. Periksa Firebase Realtime Database Rules: '+e.message;}
+}
+async function showAdminGameDetail(id){
+ const g=adminRegistryCache.find(x=>x.id===id),out=document.getElementById('adminActivityDetail');if(!g)return;out.innerHTML='<h4>Aktivitas: '+safeText(g.title||id)+'</h4><p>Memuat room regu...</p>';
+ try{
+  const rooms=await dbRequest('rooms');const matching=Object.entries(rooms||{}).filter(([k,r])=>r&&((r.gameCode===id)||(r.parentGameCode===id)||(r.adminUid===currentUser()?.uid&&r.publishedCode===id)));
+  if(!matching.length){out.innerHTML='<h4>Aktivitas: '+safeText(g.title||id)+'</h4><p>Belum ada room regu yang terhubung dengan tautan ini. Room akan muncul jika dibuat dari link game yang dipublikasikan.</p>';return;}
+  out.innerHTML='<h4>Aktivitas regu</h4>'+matching.map(([code,r])=>{const ps=(r.state?.players||[]);const seats=(r.players||[]).filter(Boolean);const activity=Object.values(r.activity||{}).sort((a,b)=>(b.at||0)-(a.at||0)).slice(0,8);return `<article class="admin-game-card"><b>${safeText(r.teamName||r.roomName||r.title||'Regu')} · ${safeText(code)}</b><div>Status: ${safeText(r.status||'menunggu')} · ${seats.length}/${r.playerLimit||4} pion bergabung</div><div>${ps.map((p,i)=>`Pion ${i+1}: ${safeText(p.name||'-')} — kotak ${p.pos||1}, pahala ${p.pahala||0}, dosa ${p.dosa||0}`).join('<br>')}</div><small>Aktivitas terakhir: ${new Date(r.state?.updatedAt||r.createdAt||Date.now()).toLocaleString('id-ID')}</small><details><summary>Riwayat aktivitas (${activity.length} terbaru)</summary>${activity.map(a=>`<div>${new Date(a.at||0).toLocaleString('id-ID')} — Pion ${a.seat||'-'} (${safeText(a.player||'')}) — giliran ${Number(a.turnIdx||0)+1}</div>`).join('')}</details></article>`}).join('');
+ }catch(e){out.innerHTML='<p>Tidak dapat membaca aktivitas: '+safeText(e.message)+'</p>';}
+}
+document.getElementById('refreshAdminGames')?.addEventListener('click',refreshAdminGames);
+document.getElementById('applyCsvEdits')?.addEventListener('click',()=>{try{const n=importQuestions(document.getElementById('csvEditor').value);resetQuizShuffle();document.getElementById('questionCount').textContent=`${n} soal hasil edit CSV siap digunakan.`;document.getElementById('message').textContent=`Edit CSV diterapkan: ${n} soal.`;alert(`${n} soal berhasil divalidasi dan diterapkan.`);}catch(e){alert('CSV belum valid: '+e.message);}});
+document.getElementById('exportAdminExcel')?.addEventListener('click',async()=>{
+ if(!currentUser()){alert('Masuk sebagai admin terlebih dahulu.');return;}
+ const rows=[['Kode Game','Judul','Tanggal Dibuat','Link Unik','Jumlah Soal','Kode Room','Nama Regu','Status','Pion','Nama Pion','Posisi Kotak','Pahala','Dosa','Selesai','Aktivitas Terakhir']];
+ for(const g of adminRegistryCache){let rooms={};try{rooms=await dbRequest('rooms');}catch(e){}
+  const matching=Object.entries(rooms||{}).filter(([k,r])=>r&&((r.gameCode===g.id)||(r.parentGameCode===g.id)||(r.adminUid===currentUser()?.uid&&r.publishedCode===g.id)));
+  if(!matching.length)rows.push([g.id,g.title||'',new Date(g.createdAt||0).toLocaleString('id-ID'),g.url||'',g.questionCount||0,'','','Belum ada regu','','','','','','', '']);
+  for(const [code,r] of matching){const ps=r.state?.players||[];if(!ps.length)rows.push([g.id,g.title||'',new Date(g.createdAt||0).toLocaleString('id-ID'),g.url||'',g.questionCount||0,code,r.teamName||r.roomName||'',r.status||'menunggu','','','','','','',new Date(r.createdAt||0).toLocaleString('id-ID')]);ps.forEach((p,i)=>rows.push([g.id,g.title||'',new Date(g.createdAt||0).toLocaleString('id-ID'),g.url||'',g.questionCount||0,code,r.teamName||r.roomName||'',r.status||'menunggu',i+1,p.name||'',p.pos||1,p.pahala||0,p.dosa||0,p.finished?'Ya':'Tidak',new Date(r.state?.updatedAt||r.createdAt||0).toLocaleString('id-ID')]));}
+ }
+ const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const csv='\ufeff'+rows.map(r=>r.map(esc).join(';')).join('\r\n');const blob=new Blob([csv],{type:'application/vnd.ms-excel;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laporan-admin-ular-tangga.xls';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1200);
+});
 document.getElementById('shareGame').addEventListener('click',async()=>{
- const status=document.getElementById('shareStatus');status.textContent='Membuat tautan multiplayer...';
+ const status=document.getElementById('shareStatus');status.textContent='Memvalidasi soal dan memublikasikan tautan unik...';
  try{
   await getIdToken();
-  const count=Math.max(3,Math.min(4,Number(document.getElementById('totalPlayers').value)||4));
-  const name=document.getElementById('name1').value.trim()||document.getElementById('roomName').value.trim()||'Pion 1';
-  const code=makeRoomCode();onlineRoomId=code;onlineSeat=0;onlineHost=true;
-  const seats=Array(count).fill(null);seats[0]={id:clientId,name,members:[name],joinedAt:Date.now()};
-  const statePlayers=Array.from({length:count},(_,i)=>({id:'p'+(i+1),pos:1,pahala:0,dosa:0,name:i===0?name:'Menunggu pemain '+(i+1),isAI:false,finished:false,finishRank:0,sixChain:0}));
-  const payload={title:'Ular Tangga Islami KKG PAI',host:clientId,hostUid:currentUser().uid,playerLimit:count,players:seats,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,status:'waiting',createdAt:Date.now(),state:{players:statePlayers,turnIdx:0,activePlayerCount:count,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
-  await dbRequest('rooms/'+code,'PUT',payload);
-  document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;document.getElementById('totalPlayers').value=String(count);
-  const url=new URL(location.href);url.hash='room='+code;history.replaceState(null,'',url.href);
-  customQuestions=payload.questions;resetQuizShuffle();activePlayerCount=count;turnIdx=0;gameOver=false;finishOrder=[];
-  for(let i=0;i<count;i++){players[i].name=statePlayers[i].name;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;players[i].isAI=false;}
-  injectPawns();updateAllPlayers();updateScores();diceBtn.disabled=true;startRoomPolling();lockRoomInterface(true);
-  const copied=await copyTextReliable(url.href);status.textContent='Link multiplayer dibuat: '+url.href+' '+(copied?'(sudah disalin).':'(salin link secara manual).');
-  roomStatus(`Ruang ${code} dibuat untuk ${count} pion. Bagikan link, tunggu semua pion bergabung, lalu tekan “Mulai Game”.`);
- }catch(err){status.textContent='Gagal membuat link multiplayer: '+err.message;}
+  // If a CSV has been edited, validate and use that exact content.
+  if(document.getElementById('csvEditor').value.trim())importQuestions(document.getElementById('csvEditor').value);
+  const code=makePublishedCode(),questions=activeQuestions(),title=(document.getElementById('roomName').value.trim()||'Game Ular Tangga Islami');
+  const payload={title,questions,quizSeconds:Number(document.getElementById('quizSeconds').value)||15,adminUid:currentUser().uid,createdAt:Date.now(),questionCount:questions.length};
+  await dbRequest('sharedGames/'+code,'PUT',payload);
+  const url=new URL(location.href);url.hash='game='+code;
+  const record={title,createdAt:payload.createdAt,questionCount:questions.length,url:url.href,gameCode:code};
+  await dbRequest(adminRegistryPath()+'/'+code,'PUT',record);
+  const copied=await copyTextReliable(url.href);status.textContent=`Tautan unik dipublikasikan: ${url.href} ${copied?'(link disalin).':'(salin link secara manual).'}`;
+  document.getElementById('adminDashboard').style.display='block';await refreshAdminGames();
+ }catch(err){status.textContent='Gagal memublikasikan link: '+err.message;}
 });
 
 /* ---------- Multiplayer rooms (Firebase Realtime Database REST) ----------
@@ -797,7 +850,7 @@ function roomStatus(msg){document.getElementById('roomStatus').textContent=msg;}
 function makeRoomCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
 async function dbRequest(path,method='GET',body){let url=dbURL+'/'+path+'.json';if(currentUser())url+='?auth='+encodeURIComponent(await currentUser().getIdToken());const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});if(!r.ok){let detail='';try{detail=(await r.text()).slice(0,160)}catch(e){}throw Error('Firebase HTTP '+r.status+(detail?': '+detail:''));}return r.status===204?null:r.json();}
 function snapshotGame(){return {players:players.slice(0,activePlayerCount).map(p=>({id:p.id,pos:p.pos,pahala:p.pahala,dosa:p.dosa,name:p.name,isAI:false,finished:!!p.finished,finishRank:p.finishRank||0,sixChain:p.sixChain||0})),turnIdx,activePlayerCount,gameOver,finishOrder:(finishOrder||[]).slice(),started:true,updatedAt:Date.now()};}
-async function writeRoomState(){if(!onlineRoomId||onlineSeat<0||onlineApplying)return;await dbRequest('rooms/'+onlineRoomId+'/state','PUT',snapshotGame());}
+async function writeRoomState(){if(!onlineRoomId||onlineSeat<0||onlineApplying)return;const snap=snapshotGame();await dbRequest('rooms/'+onlineRoomId+'/state','PUT',snap);try{await dbRequest('rooms/'+onlineRoomId+'/activity','POST',{at:Date.now(),seat:onlineSeat+1,player:players[onlineSeat]?.name||'',event:'pembaruan permainan',turnIdx:snap.turnIdx,players:snap.players,gameOver:snap.gameOver});}catch(e){console.warn('Riwayat aktivitas tidak tersimpan:',e);}}
 function applyRoomState(st){if(!st||!Array.isArray(st.players)||onlineApplying)return;onlineApplying=true;try{activePlayerCount=Math.min(4,Math.max(2,Number(st.activePlayerCount)||st.players.length));st.players.forEach((d,i)=>{if(!players[i])return;players[i].pos=Math.min(100,Math.max(1,Number(d.pos)||1));players[i].pahala=Number(d.pahala)||0;players[i].dosa=Number(d.dosa)||0;players[i].name=d.name||`Pemain ${i+1}`;players[i].isAI=false;players[i].finished=!!d.finished;players[i].finishRank=Number(d.finishRank)||0;players[i].sixChain=Number(d.sixChain)||0;});for(let i=activePlayerCount;i<4;i++){players[i].name='-';players[i].pos=1;players[i].isAI=true;players[i].finished=false;}finishOrder=Array.isArray(st.finishOrder)?st.finishOrder:players.slice(0,activePlayerCount).filter(p=>p.finished).sort((a,b)=>a.finishRank-b.finishRank).map(p=>p.id);turnIdx=Math.min(activePlayerCount-1,Math.max(0,Number(st.turnIdx)||0));gameOver=!!st.gameOver;window._onlineGameStarted=!!st.started;document.getElementById('totalPlayers').value=String(activePlayerCount);injectPawns();updateAllPlayers();updateScores();updateTurnUI();diceBtn.disabled=gameOver||turnIdx!==onlineSeat||!!players[turnIdx]?.finished;document.getElementById('message').textContent=gameOver?'Partai selesai.':(turnIdx===onlineSeat?'Giliran Anda — lempar dadu!':`Menunggu ${players[turnIdx]?.name||'pemain lain'}...`);if(finishOrder.length)showLeaderboard();}finally{onlineApplying=false;}}
 function lockRoomInterface(isHost){
  const guest=!isHost&&(!!onlineRoomId||!!location.hash.match(/room=([A-Z0-9]{6})/i));
@@ -827,7 +880,7 @@ async function pollRoom(){
   if(data.state&&Number(data.state.updatedAt||0)>Number(window._lastRoomStateAt||0)){window._lastRoomStateAt=data.state.updatedAt;applyRoomState(data.state);}
   updateScores();const joined=seats.slice(0,limit).filter(Boolean).length;const started=!!(data.state&&data.state.started);
   const names=Array.from({length:limit},(_,i)=>seats[i]?.name||`Kursi ${i+1} (kosong)`);
-  const startBtn=document.getElementById('btnStart');if(startBtn){startBtn.disabled=onlineSeat!==0||started||joined<limit;startBtn.textContent=started?'Game Sedang Berlangsung':(joined<limit?`Menunggu pemain (${joined}/${limit})`:'▶ Mulai Game');}
+  const startBtn=document.getElementById('btnStart');if(startBtn){startBtn.disabled=onlineSeat!==0||started||joined<2;startBtn.textContent=started?'Game Sedang Berlangsung':(joined<2?`Menunggu minimal 2 pion (${joined}/2)`:'▶ Mulai Game');}
   roomStatus(`Ruang ${onlineRoomId} • ${joined}/${limit} pion bergabung • ${started?'permainan berlangsung':'menunggu dimulai'} • ${names.join(' | ')}`);
  }catch(e){roomStatus('Tidak dapat menyinkronkan ruang: '+e.message+' Periksa koneksi dan Firebase Realtime Database Rules.');}
 }
@@ -837,7 +890,7 @@ async function createOnlineRoom(){
  const name=document.getElementById('name1').value.trim()||document.getElementById('roomName').value.trim();if(!name)throw Error('Isi nama pion pertama.');
  const code=makeRoomCode();onlineRoomId=code;onlineSeat=0;onlineHost=true;const seats=Array(count).fill(null);seats[0]={id:clientId,name,members:[name],joinedAt:Date.now()};
  const statePlayers=Array.from({length:count},(_,i)=>({id:'p'+(i+1),pos:1,pahala:0,dosa:0,name:i===0?name:'Menunggu pemain '+(i+1),isAI:false,finished:false,finishRank:0,sixChain:0}));
- const room={title:'Ular Tangga Islami KKG PAI',host:clientId,hostUid:currentUser().uid,playerLimit:count,players:seats,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,status:'waiting',createdAt:Date.now(),state:{players:statePlayers,turnIdx:0,activePlayerCount:count,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
+ const gameMatch=location.hash.match(/game=([^&]+)/);const room={title:'Ular Tangga Islami KKG PAI',teamName:document.getElementById('roomName').value.trim()||'Regu',gameCode:gameMatch?decodeURIComponent(gameMatch[1]):'',parentGameCode:gameMatch?decodeURIComponent(gameMatch[1]):'',adminUid:gameMatch?undefined:currentUser().uid,host:clientId,hostUid:currentUser().uid,playerLimit:count,players:seats,questions:activeQuestions(),quizSeconds:Number(document.getElementById('quizSeconds').value)||15,status:'waiting',createdAt:Date.now(),state:{players:statePlayers,turnIdx:0,activePlayerCount:count,gameOver:false,finishOrder:[],started:false,updatedAt:Date.now()}};
  await dbRequest('rooms/'+code,'PUT',room);document.getElementById('roomCode').value=code;document.getElementById('roomName').value=name;const url=new URL(location.href);url.hash='room='+code;history.replaceState(null,'',url.href);
  activePlayerCount=count;for(let i=0;i<count;i++){players[i].name=statePlayers[i].name;players[i].pos=1;players[i].pahala=0;players[i].dosa=0;players[i].finished=false;players[i].finishRank=0;players[i].sixChain=0;players[i].isAI=false;}injectPawns();updateAllPlayers();updateScores();diceBtn.disabled=true;startRoomPolling();lockRoomInterface(true);const copied=await copyTextReliable(url.href);roomStatus(`Ruang ${code} dibuat untuk ${count} pion. ${copied?'Link disalin.':'Salin link dari bilah alamat.'} Tunggu semua pion bergabung, lalu tekan Mulai Game.`);
 }
