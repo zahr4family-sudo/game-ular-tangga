@@ -832,21 +832,31 @@ document.getElementById('exportAdminExcel')?.addEventListener('click',async()=>{
 });
 document.getElementById('shareGame').addEventListener('click',async()=>{
  const status=document.getElementById('shareStatus');status.textContent='Memvalidasi soal dan memublikasikan tautan unik...';
+ let publishedUrl='';
  try{
   await getIdToken();
+  const user=currentUser();if(!user)throw Error('Sesi admin berakhir. Silakan masuk kembali.');
   // If a CSV has been edited, validate and use that exact content.
   if(document.getElementById('csvEditor').value.trim())importQuestions(document.getElementById('csvEditor').value);
   const code=makePublishedCode(),questions=activeQuestions(),title=(document.getElementById('roomName').value.trim()||'Game Ular Tangga Islami');
   const teamNames=(document.getElementById('teamNames').value||'').split(',').map(x=>x.trim()).filter(Boolean);
   if(!teamNames.length)throw Error('Masukkan minimal satu nama regu, pisahkan dengan koma.');if(teamNames.length>50)throw Error('Maksimal 50 nama regu.');if(new Set(teamNames.map(x=>x.toLocaleLowerCase('id'))).size!==teamNames.length)throw Error('Nama regu tidak boleh duplikat.');
-  const payload={title,teamNames,questions,quizSeconds:Number(document.getElementById('quizSeconds').value)||15,adminUid:currentUser().uid,createdAt:Date.now(),questionCount:questions.length};
+  const payload={title,teamNames,questions,quizSeconds:Number(document.getElementById('quizSeconds').value)||15,adminUid:user.uid,createdAt:Date.now(),questionCount:questions.length};
+  // Publish the player-facing game first. Once this succeeds, retain and show its URL
+  // even if the separate admin registry write is rejected by database rules.
   await dbRequest('sharedGames/'+code,'PUT',payload);
-  const url=new URL(location.href);url.hash='game='+code;
-  const record={title,teamNames,createdAt:payload.createdAt,questionCount:questions.length,url:url.href,gameCode:code};
-  await dbRequest(adminRegistryPath()+'/'+code,'PUT',record);
-  const copied=await copyTextReliable(url.href);status.textContent=`Tautan unik dipublikasikan: ${url.href} ${copied?'(link disalin).':'(salin link secara manual).'}`;
-  document.getElementById('adminDashboard').style.display='block';await refreshAdminGames();
- }catch(err){status.textContent='Gagal memublikasikan link: '+err.message;}
+  const url=new URL(location.href);url.hash='game='+code;publishedUrl=url.href;
+  const record={title,teamNames,createdAt:payload.createdAt,questionCount:questions.length,url:publishedUrl,gameCode:code};
+  try{
+   await dbRequest(adminRegistryPath()+'/'+code,'PUT',record);
+   const copied=await copyTextReliable(publishedUrl);
+   status.textContent=`Tautan unik berhasil dipublikasikan: ${publishedUrl} ${copied?'(link disalin).':'(salin link secara manual).'}`;
+   document.getElementById('adminDashboard').style.display='block';await refreshAdminGames();
+  }catch(registryError){
+   const copied=await copyTextReliable(publishedUrl);
+   status.innerHTML=`<strong>Tautan pemain berhasil dibuat:</strong> <a href="${safeText(publishedUrl)}" target="_blank" rel="noopener">${safeText(publishedUrl)}</a><br>${copied?'Link sudah disalin.':'Silakan salin link di atas.'}<br><strong>Namun daftar admin gagal disimpan:</strong> ${safeText(registryError.message)}<br>Periksa Firebase Realtime Database Rules agar admin yang login boleh menulis ke <code>adminGames/${safeText(user.uid)}/${safeText(code)}</code>. Tautan pemain sudah tersimpan, tetapi game ini mungkin belum muncul di daftar admin sampai izin database diperbaiki.`;
+  }
+ }catch(err){status.textContent='Gagal membuat tautan pemain: '+err.message;}
 });
 
 /* ---------- Multiplayer rooms (Firebase Realtime Database REST) ----------
@@ -857,7 +867,7 @@ let onlineRoomId='', onlineSeat=-1, onlineHost=false, onlinePolling=null, online
 const clientId=(()=>{try{let v=localStorage.getItem('kkgPaiPlayerId');if(!v){v='u'+Math.random().toString(36).slice(2,11);localStorage.setItem('kkgPaiPlayerId',v)}return v}catch(e){return 'u'+Math.random().toString(36).slice(2,11)}})();
 function roomStatus(msg){document.getElementById('roomStatus').textContent=msg;}
 function makeRoomCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
-async function dbRequest(path,method='GET',body){let url=dbURL+'/'+path+'.json';if(currentUser())url+='?auth='+encodeURIComponent(await currentUser().getIdToken());const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});if(!r.ok){let detail='';try{detail=(await r.text()).slice(0,160)}catch(e){}throw Error('Firebase HTTP '+r.status+(detail?': '+detail:''));}return r.status===204?null:r.json();}
+async function dbRequest(path,method='GET',body){let url=dbURL+'/'+path+'.json';if(currentUser())url+='?auth='+encodeURIComponent(await currentUser().getIdToken());const r=await fetch(url,{method,headers:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),cache:'no-store'});if(!r.ok){let detail='';try{detail=(await r.text()).slice(0,220)}catch(e){}if(r.status===401||r.status===403)throw Error('Firebase HTTP '+r.status+' — akses ditolak. Periksa Firebase Console → Realtime Database → Rules; pastikan pengguna yang login boleh membaca/menulis jalur yang diminta. '+(detail||''));throw Error('Firebase HTTP '+r.status+(detail?': '+detail:''));}return r.status===204?null:r.json();}
 function snapshotGame(){return {players:players.slice(0,activePlayerCount).map(p=>({id:p.id,pos:p.pos,pahala:p.pahala,dosa:p.dosa,name:p.name,isAI:false,finished:!!p.finished,finishRank:p.finishRank||0,sixChain:p.sixChain||0})),turnIdx,activePlayerCount,gameOver,finishOrder:(finishOrder||[]).slice(),started:true,updatedAt:Date.now()};}
 async function writeRoomState(){if(!onlineRoomId||onlineSeat<0||onlineApplying)return;const snap=snapshotGame();await dbRequest('rooms/'+onlineRoomId+'/state','PUT',snap);try{await dbRequest('rooms/'+onlineRoomId+'/activity','POST',{at:Date.now(),seat:onlineSeat+1,player:players[onlineSeat]?.name||'',event:'pembaruan permainan',turnIdx:snap.turnIdx,players:snap.players,gameOver:snap.gameOver});}catch(e){console.warn('Riwayat aktivitas tidak tersimpan:',e);}}
 function applyRoomState(st){if(!st||!Array.isArray(st.players)||onlineApplying)return;onlineApplying=true;try{activePlayerCount=Math.min(4,Math.max(2,Number(st.activePlayerCount)||st.players.length));st.players.forEach((d,i)=>{if(!players[i])return;players[i].pos=Math.min(100,Math.max(1,Number(d.pos)||1));players[i].pahala=Number(d.pahala)||0;players[i].dosa=Number(d.dosa)||0;players[i].name=d.name||`Pemain ${i+1}`;players[i].isAI=false;players[i].finished=!!d.finished;players[i].finishRank=Number(d.finishRank)||0;players[i].sixChain=Number(d.sixChain)||0;});for(let i=activePlayerCount;i<4;i++){players[i].name='-';players[i].pos=1;players[i].isAI=true;players[i].finished=false;}finishOrder=Array.isArray(st.finishOrder)?st.finishOrder:players.slice(0,activePlayerCount).filter(p=>p.finished).sort((a,b)=>a.finishRank-b.finishRank).map(p=>p.id);turnIdx=Math.min(activePlayerCount-1,Math.max(0,Number(st.turnIdx)||0));gameOver=!!st.gameOver;window._onlineGameStarted=!!st.started;document.getElementById('totalPlayers').value=String(activePlayerCount);injectPawns();updateAllPlayers();updateScores();updateTurnUI();diceBtn.disabled=gameOver||turnIdx!==onlineSeat||!!players[turnIdx]?.finished;document.getElementById('message').textContent=gameOver?'Partai selesai.':(turnIdx===onlineSeat?'Giliran Anda — lempar dadu!':`Menunggu ${players[turnIdx]?.name||'pemain lain'}...`);if(finishOrder.length)showLeaderboard();}finally{onlineApplying=false;}}
